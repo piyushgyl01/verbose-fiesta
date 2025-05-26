@@ -1,36 +1,28 @@
-"use client";
+'use client'
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Search,
-  Plus,
-  Star,
-  Trash2,
-  Edit3,
-  BookOpen,
-  Tag,
-  Calendar,
-  Filter,
-} from "lucide-react";
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Target, Plus, Calendar, TrendingUp, CheckCircle2, Circle, Flame, Award, BarChart3, Clock, RefreshCw } from 'lucide-react'
 
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  tags: string[];
-  isFavorite: boolean;
-  createdAt: Date;
-  updatedAt: Date;
+interface Habit {
+  id: string
+  name: string
+  description: string
+  category: string
+  frequency: 'daily' | 'weekly'
+  targetCount: number
+  color: string
+  createdAt: Date
+  completions: Record<string, number> // date -> count
 }
 
 interface FilterState {
-  category: string;
-  isFavorite: boolean;
-  searchQuery: string;
+  category: string
+  frequency: string
+  showCompleted: boolean
 }
 
+// Header Component
 const Header = () => {
   return (
     <motion.header
@@ -45,56 +37,90 @@ const Header = () => {
             className="flex items-center space-x-3"
             whileHover={{ scale: 1.05 }}
           >
-            <BookOpen className="w-8 h-8 text-white" />
-            <h1 className="text-2xl font-bold text-white">NoteVault</h1>
+            <Target className="w-8 h-8 text-white" />
+            <h1 className="text-2xl font-bold text-white">HabitFlow</h1>
           </motion.div>
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 text-sm text-white/60">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span>Auto-save enabled</span>
+              <span>Building momentum</span>
             </div>
           </div>
         </div>
       </div>
     </motion.header>
-  );
-};
+  )
+}
 
-// Note Card Component
-const NoteCard = ({
-  note,
-  onToggleFavorite,
-  onDelete,
+// Habit Card Component
+const HabitCard = ({
+  habit,
+  onToggleCompletion,
   onEdit,
+  onDelete,
 }: {
-  note: Note;
-  onToggleFavorite: (id: string) => void;
-  onDelete: (id: string) => void;
-  onEdit: (note: Note) => void;
+  habit: Habit
+  onToggleCompletion: (habitId: string, date: string) => void
+  onEdit: (habit: Habit) => void
+  onDelete: (habitId: string) => void
 }) => {
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "work":
-        return "bg-white/20 text-white border-white/40";
-      case "personal":
-        return "bg-white/15 text-white border-white/30";
-      case "ideas":
-        return "bg-white/25 text-white border-white/50";
-      case "projects":
-        return "bg-white/10 text-white border-white/25";
-      default:
-        return "bg-white/10 text-white border-white/20";
-    }
-  };
+  const today = new Date().toISOString().split('T')[0]
+  const todayCount = habit.completions[today] || 0
+  const isCompleted = todayCount >= habit.targetCount
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(date);
-  };
+  // Calculate streak
+  const calculateStreak = () => {
+    let streak = 0
+    const date = new Date()
+    
+    while (true) {
+      const dateStr = date.toISOString().split('T')[0]
+      const completion = habit.completions[dateStr] || 0
+      
+      if (completion >= habit.targetCount) {
+        streak++
+        date.setDate(date.getDate() - 1)
+      } else {
+        break
+      }
+    }
+    
+    return streak
+  }
+
+  const streak = calculateStreak()
+
+  // Get last 7 days for mini calendar
+  const getLast7Days = () => {
+    const days = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      const completion = habit.completions[dateStr] || 0
+      const isComplete = completion >= habit.targetCount
+      
+      days.push({
+        date: dateStr,
+        day: date.getDate(),
+        isComplete,
+        isToday: dateStr === today
+      })
+    }
+    return days
+  }
+
+  const weekDays = getLast7Days()
+
+  const getCategoryStyle = (category: string) => {
+    switch (category) {
+      case 'health': return 'bg-white/20 text-white border-white/40'
+      case 'productivity': return 'bg-white/15 text-white border-white/30'
+      case 'learning': return 'bg-white/25 text-white border-white/50'
+      case 'mindfulness': return 'bg-white/10 text-white border-white/25'
+      default: return 'bg-white/10 text-white border-white/20'
+    }
+  }
 
   return (
     <motion.div
@@ -103,154 +129,173 @@ const NoteCard = ({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
       whileHover={{ scale: 1.02, y: -4 }}
-      className="bg-black border border-white/20 rounded-lg p-6 transition-all duration-200 cursor-pointer group"
-      onClick={() => onEdit(note)}
+      className="bg-black border border-white/20 rounded-lg p-6 transition-all duration-200 group"
     >
-      <div className="flex items-start justify-between mb-3">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-2">
-            <h3 className="font-semibold text-white line-clamp-1">
-              {note.title}
-            </h3>
-            {note.isFavorite && (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                <Star className="w-4 h-4 text-white fill-current" />
+          <div className="flex items-center space-x-2 mb-1">
+            <h3 className="font-semibold text-white">{habit.name}</h3>
+            {streak > 0 && (
+              <motion.div
+                className="flex items-center space-x-1 text-white/80"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+              >
+                <Flame className="w-4 h-4" />
+                <span className="text-sm font-medium">{streak}</span>
               </motion.div>
             )}
           </div>
-          <p className="text-sm text-white/70 line-clamp-3 mb-3">
-            {note.content}
-          </p>
+          <p className="text-sm text-white/60 mb-2">{habit.description}</p>
+          <span className={`px-2 py-1 text-xs font-medium rounded border ${getCategoryStyle(habit.category)}`}>
+            {habit.category}
+          </span>
         </div>
 
         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFavorite(note.id);
-            }}
+            onClick={() => onEdit(habit)}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <Star
-              className={`w-4 h-4 ${
-                note.isFavorite ? "text-white fill-current" : "text-white/40"
-              }`}
-            />
+            <svg className="w-4 h-4 text-white/40 hover:text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(note.id);
-            }}
+            onClick={() => onDelete(habit.id)}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <Trash2 className="w-4 h-4 text-white/40 hover:text-white" />
+            <svg className="w-4 h-4 text-white/40 hover:text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 102 0v3a1 1 0 11-2 0V9zm4 0a1 1 0 10-2 0v3a1 1 0 102 0V9z" clipRule="evenodd" />
+            </svg>
           </motion.button>
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <span
-            className={`px-2 py-1 text-xs font-medium rounded border ${getCategoryColor(
-              note.category
-            )}`}
-          >
-            {note.category}
+      {/* Progress */}
+      <div className="mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm text-white/60">Today's Progress</span>
+          <span className="text-sm text-white font-medium">
+            {todayCount}/{habit.targetCount}
           </span>
-          {note.tags.slice(0, 2).map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-1 text-xs bg-white/5 text-white/60 rounded border border-white/10"
-            >
-              #{tag}
-            </span>
-          ))}
-          {note.tags.length > 2 && (
-            <span className="text-xs text-white/40">
-              +{note.tags.length - 2}
-            </span>
-          )}
         </div>
-        <div className="flex items-center space-x-1 text-xs text-white/40">
-          <Calendar className="w-3 h-3" />
-          <span>{formatDate(note.updatedAt)}</span>
+        <div className="w-full bg-white/10 rounded-full h-2">
+          <motion.div
+            className="bg-white rounded-full h-2"
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min((todayCount / habit.targetCount) * 100, 100)}%` }}
+            transition={{ duration: 0.5 }}
+          />
         </div>
       </div>
-    </motion.div>
-  );
-};
 
-const NoteEditor = ({
-  note,
+      {/* Mini Calendar */}
+      <div className="mb-4">
+        <span className="text-sm text-white/60 mb-2 block">Last 7 Days</span>
+        <div className="grid grid-cols-7 gap-1">
+          {weekDays.map((day) => (
+            <motion.div
+              key={day.date}
+              className={`w-8 h-8 rounded border text-xs flex items-center justify-center ${
+                day.isComplete 
+                  ? 'bg-white text-black border-white' 
+                  : day.isToday
+                  ? 'border-white/60 text-white/80'
+                  : 'border-white/20 text-white/40'
+              }`}
+              whileHover={{ scale: 1.1 }}
+            >
+              {day.day}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Action Button */}
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => onToggleCompletion(habit.id, today)}
+        className={`w-full py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+          isCompleted
+            ? 'bg-white text-black'
+            : 'border border-white/20 text-white hover:bg-white/10'
+        }`}
+      >
+        {isCompleted ? (
+          <>
+            <CheckCircle2 className="w-5 h-5" />
+            <span>Completed Today</span>
+          </>
+        ) : (
+          <>
+            <Circle className="w-5 h-5" />
+            <span>Mark Complete</span>
+          </>
+        )}
+      </motion.button>
+    </motion.div>
+  )
+}
+
+// Habit Editor Modal
+const HabitEditor = ({
+  habit,
   isOpen,
   onClose,
   onSave,
 }: {
-  note: Note | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => void;
+  habit: Habit | null
+  isOpen: boolean
+  onClose: () => void
+  onSave: (habitData: Omit<Habit, 'id' | 'createdAt' | 'completions'>) => void
 }) => {
   const [formData, setFormData] = useState({
-    title: "",
-    content: "",
-    category: "personal",
-    tags: [] as string[],
-    isFavorite: false,
-  });
-  const [tagInput, setTagInput] = useState("");
+    name: '',
+    description: '',
+    category: 'health',
+    frequency: 'daily' as 'daily' | 'weekly',
+    targetCount: 1,
+    color: '#ffffff',
+  })
 
   useEffect(() => {
-    if (note) {
+    if (habit) {
       setFormData({
-        title: note.title,
-        content: note.content,
-        category: note.category,
-        tags: note.tags,
-        isFavorite: note.isFavorite,
-      });
+        name: habit.name,
+        description: habit.description,
+        category: habit.category,
+        frequency: habit.frequency,
+        targetCount: habit.targetCount,
+        color: habit.color,
+      })
     } else {
       setFormData({
-        title: "",
-        content: "",
-        category: "personal",
-        tags: [],
-        isFavorite: false,
-      });
+        name: '',
+        description: '',
+        category: 'health',
+        frequency: 'daily',
+        targetCount: 1,
+        color: '#ffffff',
+      })
     }
-  }, [note, isOpen]);
+  }, [habit, isOpen])
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.title.trim()) return;
+    e.preventDefault()
+    if (!formData.name.trim()) return
 
-    onSave(formData);
-    onClose();
-  };
+    onSave(formData)
+    onClose()
+  }
 
-  const addTag = () => {
-    if (tagInput.trim() && !formData.tags.includes(tagInput.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, tagInput.trim()],
-      }));
-      setTagInput("");
-    }
-  };
-
-  const removeTag = (tag: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((t) => t !== tag),
-    }));
-  };
-
-  if (!isOpen) return null;
+  if (!isOpen) return null
 
   return (
     <motion.div
@@ -260,165 +305,90 @@ const NoteEditor = ({
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="bg-black border border-white/20 rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden"
+        className="bg-black border border-white/20 rounded-lg w-full max-w-2xl"
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 20 }}
       >
         <div className="flex items-center justify-between p-6 border-b border-white/20">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <Edit3 className="w-5 h-5" />
-            <span>{note ? "Edit Note" : "Create Note"}</span>
+            <Target className="w-5 h-5" />
+            <span>{habit ? 'Edit Habit' : 'Create Habit'}</span>
           </h2>
           <button
             onClick={onClose}
             className="text-white/60 hover:text-white transition-colors"
           >
             <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
             </svg>
           </button>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto"
-        >
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Title
-            </label>
+            <label className="block text-sm font-medium text-white mb-2">Habit Name</label>
             <input
               type="text"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, title: e.target.value }))
-              }
-              className="w-full px-4 py-3 bg-black border border-white/20 rounded-lg focus:border-white outline-none transition-colors text-white placeholder-white/40 text-lg"
-              placeholder="Enter note title..."
+              value={formData.name}
+              onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full px-4 py-3 bg-black border border-white/20 rounded-lg focus:border-white outline-none transition-colors text-white placeholder-white/40"
+              placeholder="e.g., Drink 8 glasses of water"
               autoFocus
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">
-                Category
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, category: e.target.value }))
-                }
-                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              >
-                <option value="personal">Personal</option>
-                <option value="work">Work</option>
-                <option value="ideas">Ideas</option>
-                <option value="projects">Projects</option>
-                <option value="study">Study</option>
-              </select>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="favorite"
-                checked={formData.isFavorite}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    isFavorite: e.target.checked,
-                  }))
-                }
-                className="w-4 h-4 rounded border-white/20"
-              />
-              <label
-                htmlFor="favorite"
-                className="text-sm font-medium text-white flex items-center space-x-1"
-              >
-                <Star className="w-4 h-4" />
-                <span>Add to favorites</span>
-              </label>
-            </div>
-          </div>
-
           <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Content
-            </label>
+            <label className="block text-sm font-medium text-white mb-2">Description</label>
             <textarea
-              value={formData.content}
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, content: e.target.value }))
-              }
-              className="w-full px-4 py-3 bg-black border border-white/20 rounded-lg focus:border-white outline-none transition-colors text-white placeholder-white/40 min-h-[200px] resize-y"
-              placeholder="Write your note content..."
-              rows={8}
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              className="w-full px-4 py-3 bg-black border border-white/20 rounded-lg focus:border-white outline-none transition-colors text-white placeholder-white/40"
+              placeholder="Why is this habit important to you?"
+              rows={3}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">
-              Tags
-            </label>
-            <div className="flex space-x-2 mb-3">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) =>
-                  e.key === "Enter" && (e.preventDefault(), addTag())
-                }
-                className="flex-1 px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="Add tags..."
-              />
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                type="button"
-                onClick={addTag}
-                className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors text-white"
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               >
-                <Tag className="w-4 h-4" />
-              </motion.button>
+                <option value="health">Health</option>
+                <option value="productivity">Productivity</option>
+                <option value="learning">Learning</option>
+                <option value="mindfulness">Mindfulness</option>
+                <option value="fitness">Fitness</option>
+                <option value="social">Social</option>
+              </select>
             </div>
 
-            {formData.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {formData.tags.map((tag) => (
-                  <motion.span
-                    key={tag}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center space-x-2 px-3 py-1 bg-white/10 text-white rounded-full text-sm border border-white/20"
-                  >
-                    <span>#{tag}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="text-white/60 hover:text-white"
-                    >
-                      <svg
-                        className="w-3 h-3"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </motion.span>
-                ))}
-              </div>
-            )}
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Frequency</label>
+              <select
+                value={formData.frequency}
+                onChange={(e) => setFormData(prev => ({ ...prev, frequency: e.target.value as 'daily' | 'weekly' }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Target</label>
+              <input
+                type="number"
+                min="1"
+                max="20"
+                value={formData.targetCount}
+                onChange={(e) => setFormData(prev => ({ ...prev, targetCount: parseInt(e.target.value) || 1 }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
+            </div>
           </div>
 
           <div className="flex space-x-3 pt-4">
@@ -428,7 +398,7 @@ const NoteEditor = ({
               type="submit"
               className="flex-1 bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors"
             >
-              {note ? "Update Note" : "Create Note"}
+              {habit ? 'Update Habit' : 'Create Habit'}
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -443,15 +413,16 @@ const NoteEditor = ({
         </form>
       </motion.div>
     </motion.div>
-  );
-};
+  )
+}
 
-const SearchAndFilters = ({
+// Filters Component
+const Filters = ({
   filters,
   onFilterChange,
 }: {
-  filters: FilterState;
-  onFilterChange: (filters: FilterState) => void;
+  filters: FilterState
+  onFilterChange: (filters: FilterState) => void
 }) => {
   return (
     <motion.div
@@ -461,161 +432,174 @@ const SearchAndFilters = ({
       transition={{ delay: 0.2 }}
     >
       <div className="flex items-center space-x-2 mb-4">
-        <Filter className="w-5 h-5 text-white" />
-        <h3 className="font-semibold text-white">Search & Filter</h3>
+        <BarChart3 className="w-5 h-5 text-white" />
+        <h3 className="font-semibold text-white">Filters</h3>
       </div>
-
+      
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-white mb-2">
-            Search
-          </label>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40" />
-            <input
-              type="text"
-              value={filters.searchQuery}
-              onChange={(e) =>
-                onFilterChange({ ...filters, searchQuery: e.target.value })
-              }
-              className="w-full pl-10 pr-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-              placeholder="Search notes..."
-            />
-          </div>
-        </div>
-
         <div>
-          <label className="block text-sm font-medium text-white mb-2">
-            Category
-          </label>
+          <label className="block text-sm font-medium text-white mb-2">Category</label>
           <select
             value={filters.category}
-            onChange={(e) =>
-              onFilterChange({ ...filters, category: e.target.value })
-            }
+            onChange={(e) => onFilterChange({ ...filters, category: e.target.value })}
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
             <option value="">All Categories</option>
-            <option value="personal">Personal</option>
-            <option value="work">Work</option>
-            <option value="ideas">Ideas</option>
-            <option value="projects">Projects</option>
-            <option value="study">Study</option>
+            <option value="health">Health</option>
+            <option value="productivity">Productivity</option>
+            <option value="learning">Learning</option>
+            <option value="mindfulness">Mindfulness</option>
+            <option value="fitness">Fitness</option>
+            <option value="social">Social</option>
           </select>
         </div>
-      </div>
 
-      <div className="mt-4 flex items-center space-x-4">
-        <label className="flex items-center space-x-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={filters.isFavorite}
-            onChange={(e) =>
-              onFilterChange({ ...filters, isFavorite: e.target.checked })
-            }
-            className="w-4 h-4 rounded border-white/20"
-          />
-          <span className="text-sm text-white flex items-center space-x-1">
-            <Star className="w-4 h-4" />
-            <span>Favorites only</span>
-          </span>
-        </label>
+        <div>
+          <label className="block text-sm font-medium text-white mb-2">Frequency</label>
+          <select
+            value={filters.frequency}
+            onChange={(e) => onFilterChange({ ...filters, frequency: e.target.value })}
+            className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+          >
+            <option value="">All Frequencies</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+          </select>
+        </div>
+
+        <div className="flex items-end">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={filters.showCompleted}
+              onChange={(e) => onFilterChange({ ...filters, showCompleted: e.target.checked })}
+              className="w-4 h-4 rounded border-white/20"
+            />
+            <span className="text-sm text-white">Show completed only</span>
+          </label>
+        </div>
       </div>
     </motion.div>
-  );
-};
+  )
+}
 
-export default function NotesApp() {
-  const [notes, setNotes] = useState<Note[]>([]);
+// Main App Component
+export default function HabitTracker() {
+  const [habits, setHabits] = useState<Habit[]>([])
   const [filters, setFilters] = useState<FilterState>({
-    category: "",
-    isFavorite: false,
-    searchQuery: "",
-  });
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+    category: '',
+    frequency: '',
+    showCompleted: false,
+  })
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editingHabit, setEditingHabit] = useState<Habit | null>(null)
 
+  const today = new Date().toISOString().split('T')[0]
+
+  // Load habits from localStorage
   useEffect(() => {
-    const savedNotes = localStorage.getItem("notes");
-    if (savedNotes) {
-      const parsedNotes = JSON.parse(savedNotes).map((note: any) => ({
-        ...note,
-        createdAt: new Date(note.createdAt),
-        updatedAt: new Date(note.updatedAt),
-      }));
-      setNotes(parsedNotes);
+    const savedHabits = localStorage.getItem('habits')
+    if (savedHabits) {
+      const parsedHabits = JSON.parse(savedHabits).map((habit: any) => ({
+        ...habit,
+        createdAt: new Date(habit.createdAt),
+      }))
+      setHabits(parsedHabits)
     }
-  }, []);
+  }, [])
 
+  // Save habits to localStorage
   useEffect(() => {
-    if (notes.length > 0) {
-      localStorage.setItem("notes", JSON.stringify(notes));
+    if (habits.length > 0) {
+      localStorage.setItem('habits', JSON.stringify(habits))
     }
-  }, [notes]);
+  }, [habits])
 
-  const createNote = () => {
-    setEditingNote(null);
-    setIsEditorOpen(true);
-  };
+  const createHabit = () => {
+    setEditingHabit(null)
+    setIsEditorOpen(true)
+  }
 
-  const editNote = (note: Note) => {
-    setEditingNote(note);
-    setIsEditorOpen(true);
-  };
+  const editHabit = (habit: Habit) => {
+    setEditingHabit(habit)
+    setIsEditorOpen(true)
+  }
 
-  const saveNote = (noteData: Omit<Note, "id" | "createdAt" | "updatedAt">) => {
-    if (editingNote) {
-      setNotes((prev) =>
-        prev.map((note) =>
-          note.id === editingNote.id
-            ? { ...note, ...noteData, updatedAt: new Date() }
-            : note
-        )
-      );
+  const saveHabit = (habitData: Omit<Habit, 'id' | 'createdAt' | 'completions'>) => {
+    if (editingHabit) {
+      // Update existing habit
+      setHabits(prev => prev.map(habit => 
+        habit.id === editingHabit.id 
+          ? { ...habit, ...habitData }
+          : habit
+      ))
     } else {
-      const newNote: Note = {
-        ...noteData,
+      // Create new habit
+      const newHabit: Habit = {
+        ...habitData,
         id: Date.now().toString(),
         createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setNotes((prev) => [newNote, ...prev]);
+        completions: {},
+      }
+      setHabits(prev => [newHabit, ...prev])
     }
-  };
+  }
 
-  const toggleFavorite = (id: string) => {
-    setNotes((prev) =>
-      prev.map((note) =>
-        note.id === id
-          ? { ...note, isFavorite: !note.isFavorite, updatedAt: new Date() }
-          : note
-      )
-    );
-  };
+  const toggleCompletion = (habitId: string, date: string) => {
+    setHabits(prev => prev.map(habit => {
+      if (habit.id === habitId) {
+        const currentCount = habit.completions[date] || 0
+        const newCount = currentCount < habit.targetCount ? currentCount + 1 : 0
+        
+        return {
+          ...habit,
+          completions: {
+            ...habit.completions,
+            [date]: newCount
+          }
+        }
+      }
+      return habit
+    }))
+  }
 
-  const deleteNote = (id: string) => {
-    setNotes((prev) => prev.filter((note) => note.id !== id));
-  };
+  const deleteHabit = (habitId: string) => {
+    setHabits(prev => prev.filter(habit => habit.id !== habitId))
+  }
 
-  const filteredNotes = notes.filter((note) => {
-    if (filters.category && note.category !== filters.category) return false;
-    if (filters.isFavorite && !note.isFavorite) return false;
-    if (filters.searchQuery) {
-      const query = filters.searchQuery.toLowerCase();
-      return (
-        note.title.toLowerCase().includes(query) ||
-        note.content.toLowerCase().includes(query) ||
-        note.tags.some((tag) => tag.toLowerCase().includes(query))
-      );
+  // Filter habits
+  const filteredHabits = habits.filter(habit => {
+    if (filters.category && habit.category !== filters.category) return false
+    if (filters.frequency && habit.frequency !== filters.frequency) return false
+    if (filters.showCompleted) {
+      const todayCount = habit.completions[today] || 0
+      if (todayCount < habit.targetCount) return false
     }
-    return true;
-  });
+    return true
+  })
 
   const stats = {
-    total: notes.length,
-    favorites: notes.filter((n) => n.isFavorite).length,
-    categories: new Set(notes.map((n) => n.category)).size,
-  };
+    total: habits.length,
+    completed: habits.filter(h => (h.completions[today] || 0) >= h.targetCount).length,
+    streak: habits.reduce((acc, habit) => {
+      let streak = 0
+      const date = new Date()
+      
+      while (true) {
+        const dateStr = date.toISOString().split('T')[0]
+        const completion = habit.completions[dateStr] || 0
+        
+        if (completion >= habit.targetCount) {
+          streak++
+          date.setDate(date.getDate() - 1)
+        } else {
+          break
+        }
+      }
+      
+      return Math.max(acc, streak)
+    }, 0),
+  }
 
   return (
     <div className="min-h-screen bg-black">
@@ -631,22 +615,28 @@ export default function NotesApp() {
         >
           <div className="bg-black border border-white/20 rounded-lg p-6 text-center">
             <div className="text-3xl font-bold text-white">{stats.total}</div>
-            <div className="text-white/60">Total Notes</div>
+            <div className="text-white/60 flex items-center justify-center space-x-1">
+              <Target className="w-4 h-4" />
+              <span>Total Habits</span>
+            </div>
           </div>
           <div className="bg-black border border-white/20 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-white">
-              {stats.favorites}
+            <div className="text-3xl font-bold text-white">{stats.completed}</div>
+            <div className="text-white/60 flex items-center justify-center space-x-1">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Completed Today</span>
             </div>
-            <div className="text-white/60">Favorites</div>
           </div>
           <div className="bg-black border border-white/20 rounded-lg p-6 text-center">
-            <div className="text-3xl font-bold text-white">
-              {stats.categories}
+            <div className="text-3xl font-bold text-white">{stats.streak}</div>
+            <div className="text-white/60 flex items-center justify-center space-x-1">
+              <Flame className="w-4 h-4" />
+              <span>Best Streak</span>
             </div>
-            <div className="text-white/60">Categories</div>
           </div>
         </motion.div>
 
+        {/* Create Habit Button */}
         <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
@@ -656,59 +646,60 @@ export default function NotesApp() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={createNote}
+            onClick={createHabit}
             className="w-full bg-white text-black py-4 rounded-lg font-semibold hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Create New Note</span>
+            <span>Create New Habit</span>
           </motion.button>
         </motion.div>
 
-        <SearchAndFilters filters={filters} onFilterChange={setFilters} />
+        <Filters filters={filters} onFilterChange={setFilters} />
 
+        {/* Habits Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {filteredNotes.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                onToggleFavorite={toggleFavorite}
-                onDelete={deleteNote}
-                onEdit={editNote}
+            {filteredHabits.map((habit) => (
+              <HabitCard
+                key={habit.id}
+                habit={habit}
+                onToggleCompletion={toggleCompletion}
+                onEdit={editHabit}
+                onDelete={deleteHabit}
               />
             ))}
           </AnimatePresence>
         </div>
 
-        {filteredNotes.length === 0 && (
+        {/* Empty State */}
+        {filteredHabits.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <div className="text-white/20 text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-semibold text-white mb-2">
-              No notes found
-            </h3>
+            <div className="text-white/20 text-6xl mb-4">🎯</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No habits found</h3>
             <p className="text-white/60">
-              {notes.length === 0
-                ? "Create your first note to get started!"
-                : "Try adjusting your search or filters."}
+              {habits.length === 0
+                ? 'Create your first habit to start building momentum!'
+                : 'Try adjusting your filters.'}
             </p>
           </motion.div>
         )}
       </div>
 
+      {/* Habit Editor Modal */}
       <AnimatePresence>
         {isEditorOpen && (
-          <NoteEditor
-            note={editingNote}
+          <HabitEditor
+            habit={editingHabit}
             isOpen={isEditorOpen}
             onClose={() => setIsEditorOpen(false)}
-            onSave={saveNote}
+            onSave={saveHabit}
           />
         )}
       </AnimatePresence>
     </div>
-  );
+  )
 }
