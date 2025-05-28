@@ -3,60 +3,61 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  ChefHat, Plus, Clock, Users, Flame, Star, BookOpen,
-  ShoppingCart, Calendar, Timer, Utensils, Coffee, Soup,
-  Cookie, Apple, Fish, Beef, Carrot, Filter, Search,
-  Heart, CheckCircle2, Circle, Play, Pause, RotateCcw
+  GraduationCap, Plus, Clock, BookOpen, Trophy, Star, Play,
+  Pause, CheckCircle2, Circle, Target, TrendingUp, Calendar,
+  Filter, Search, Video, FileText, Award, Brain, Code,
+  Palette, DollarSign, Users, Globe, Laptop, Phone,
+  Zap, BarChart3, Settings, Eye, EyeOff, Edit, Trash2
 } from 'lucide-react'
 
-interface Ingredient {
-  name: string
-  amount: number
-  unit: string
-  category: string
+interface Lesson {
+  id: string
+  title: string
+  type: 'video' | 'reading' | 'exercise' | 'quiz'
+  duration: number // in minutes
+  completed: boolean
+  notes: string
 }
 
-interface Recipe {
+interface Course {
   id: string
-  name: string
+  title: string
   description: string
+  instructor: string
   category: string
-  difficulty: 'easy' | 'medium' | 'hard'
-  prepTime: number
-  cookTime: number
-  servings: number
-  calories: number
-  ingredients: Ingredient[]
-  instructions: string[]
-  tags: string[]
+  difficulty: 'beginner' | 'intermediate' | 'advanced'
+  totalLessons: number
+  completedLessons: number
+  estimatedHours: number
+  actualHours: number
+  progress: number // 0-100
+  rating: number // 0-5
+  status: 'not-started' | 'in-progress' | 'completed' | 'paused'
+  startDate?: Date
+  completedDate?: Date
+  targetDate?: Date
+  skills: string[]
+  lessons: Lesson[]
+  certificate: boolean
+  certificateUrl?: string
   isFavorite: boolean
-  timesCooked: number
-  rating: number
   createdAt: Date
 }
 
-interface MealPlan {
+interface LearningGoal {
   id: string
-  date: Date
-  breakfast?: Recipe
-  lunch?: Recipe
-  dinner?: Recipe
-  snacks: Recipe[]
-}
-
-interface ShoppingItem {
-  name: string
-  amount: number
-  unit: string
-  category: string
-  purchased: boolean
-  recipeId?: string
+  title: string
+  description: string
+  targetDate: Date
+  courses: string[] // course IDs
+  progress: number
+  completed: boolean
 }
 
 interface FilterState {
   category: string
   difficulty: string
-  maxTime: string
+  status: string
   favorites: boolean
   searchQuery: string
 }
@@ -76,13 +77,13 @@ const Header = () => {
             className="flex items-center space-x-3"
             whileHover={{ scale: 1.05 }}
           >
-            <ChefHat className="w-8 h-8 text-white" />
-            <h1 className="text-2xl font-bold text-white">CookFlow</h1>
+            <GraduationCap className="w-8 h-8 text-white" />
+            <h1 className="text-2xl font-bold text-white">LearnFlow</h1>
           </motion.div>
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 text-sm text-white/60">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span>Ready to cook</span>
+              <span>Keep learning</span>
             </div>
           </div>
         </div>
@@ -91,13 +92,14 @@ const Header = () => {
   )
 }
 
-// Recipe Stats Dashboard
-const RecipeStats = ({ recipes, mealPlans }: { recipes: Recipe[], mealPlans: MealPlan[] }) => {
-  const totalRecipes = recipes.length
-  const favoriteRecipes = recipes.filter(r => r.isFavorite).length
-  const totalTimesCooked = recipes.reduce((sum, r) => sum + r.timesCooked, 0)
-  const avgRating = recipes.length > 0 
-    ? recipes.reduce((sum, r) => sum + r.rating, 0) / recipes.length 
+// Learning Stats Dashboard
+const LearningStats = ({ courses, goals }: { courses: Course[], goals: LearningGoal[] }) => {
+  const totalCourses = courses.length
+  const completedCourses = courses.filter(c => c.status === 'completed').length
+  const inProgressCourses = courses.filter(c => c.status === 'in-progress').length
+  const totalHoursLearned = courses.reduce((sum, c) => sum + c.actualHours, 0)
+  const avgProgress = courses.length > 0 
+    ? courses.reduce((sum, c) => sum + c.progress, 0) / courses.length 
     : 0
 
   return (
@@ -108,77 +110,86 @@ const RecipeStats = ({ recipes, mealPlans }: { recipes: Recipe[], mealPlans: Mea
       transition={{ delay: 0.1 }}
     >
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{totalRecipes}</div>
+        <div className="text-2xl font-bold text-white">{totalCourses}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
           <BookOpen className="w-3 h-3" />
-          <span>Total Recipes</span>
+          <span>Total Courses</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{favoriteRecipes}</div>
+        <div className="text-2xl font-bold text-white">{completedCourses}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <Heart className="w-3 h-3" />
-          <span>Favorites</span>
+          <Trophy className="w-3 h-3" />
+          <span>Completed</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{totalTimesCooked}</div>
+        <div className="text-2xl font-bold text-white">{inProgressCourses}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <ChefHat className="w-3 h-3" />
-          <span>Times Cooked</span>
+          <Play className="w-3 h-3" />
+          <span>In Progress</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{avgRating.toFixed(1)}</div>
+        <div className="text-2xl font-bold text-white">{Math.round(totalHoursLearned)}h</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <Star className="w-3 h-3" />
-          <span>Avg Rating</span>
+          <Clock className="w-3 h-3" />
+          <span>Hours Learned</span>
         </div>
       </div>
     </motion.div>
   )
 }
 
-// Recipe Card Component
-const RecipeCard = ({
-  recipe,
+// Course Card Component
+const CourseCard = ({
+  course,
   onView,
-  onCook,
+  onStart,
   onToggleFavorite,
   onEdit,
   onDelete,
 }: {
-  recipe: Recipe
-  onView: (recipe: Recipe) => void
-  onCook: (recipe: Recipe) => void
+  course: Course
+  onView: (course: Course) => void
+  onStart: (course: Course) => void
   onToggleFavorite: (id: string) => void
-  onEdit: (recipe: Recipe) => void
+  onEdit: (course: Course) => void
   onDelete: (id: string) => void
 }) => {
   const getCategoryIcon = (category: string) => {
     const icons = {
-      breakfast: Coffee,
-      lunch: Soup,
-      dinner: Utensils,
-      dessert: Cookie,
-      snack: Apple,
-      vegetarian: Carrot,
-      meat: Beef,
-      seafood: Fish,
-      other: ChefHat,
+      programming: Code,
+      design: Palette,
+      business: DollarSign,
+      marketing: TrendingUp,
+      'data-science': BarChart3,
+      'web-development': Globe,
+      'mobile-development': Phone,
+      ai: Brain,
+      other: BookOpen,
     }
-    const Icon = icons[category as keyof typeof icons] || ChefHat
+    const Icon = icons[category as keyof typeof icons] || BookOpen
     return <Icon className="w-4 h-4" />
+  }
+
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'completed': return 'bg-white/20 text-white border-white/40'
+      case 'in-progress': return 'bg-white/15 text-white border-white/30'
+      case 'paused': return 'bg-white/10 text-white border-white/20'
+      default: return 'bg-white/5 text-white/60 border-white/10'
+    }
   }
 
   const getDifficultyStyle = (difficulty: string) => {
     switch (difficulty) {
-      case 'easy': return 'bg-white/10 text-white border-white/30'
-      case 'medium': return 'bg-white/20 text-white border-white/40'
-      case 'hard': return 'bg-white/30 text-white border-white/50'
+      case 'beginner': return 'bg-white/10 text-white border-white/30'
+      case 'intermediate': return 'bg-white/20 text-white border-white/40'
+      case 'advanced': return 'bg-white/30 text-white border-white/50'
       default: return 'bg-white/10 text-white border-white/20'
     }
   }
@@ -192,8 +203,6 @@ const RecipeCard = ({
     ))
   }
 
-  const totalTime = recipe.prepTime + recipe.cookTime
-
   return (
     <motion.div
       layout
@@ -202,58 +211,98 @@ const RecipeCard = ({
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
       whileHover={{ scale: 1.02, y: -4 }}
       className="bg-black border border-white/20 rounded-lg p-6 transition-all duration-200 group cursor-pointer"
-      onClick={() => onView(recipe)}
+      onClick={() => onView(course)}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <h3 className="font-semibold text-white">{recipe.name}</h3>
-            {recipe.isFavorite && (
+            <h3 className="font-semibold text-white">{course.title}</h3>
+            {course.isFavorite && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
               >
-                <Heart className="w-4 h-4 text-white fill-current" />
+                <Star className="w-4 h-4 text-white fill-current" />
               </motion.div>
             )}
+            {course.certificate && (
+              <Award className="w-4 h-4 text-white" />
+            )}
           </div>
-          <p className="text-sm text-white/60 mb-3 line-clamp-2">{recipe.description}</p>
+          <p className="text-sm text-white/60 mb-2">{course.instructor}</p>
+          <p className="text-sm text-white/60 mb-3 line-clamp-2">{course.description}</p>
           
           <div className="flex items-center space-x-3 text-sm text-white/60 mb-3">
             <div className="flex items-center space-x-1">
               <Clock className="w-3 h-3" />
-              <span>{totalTime}m</span>
+              <span>{course.estimatedHours}h</span>
             </div>
             <div className="flex items-center space-x-1">
-              <Users className="w-3 h-3" />
-              <span>{recipe.servings}</span>
+              <BookOpen className="w-3 h-3" />
+              <span>{course.totalLessons} lessons</span>
             </div>
-            <div className="flex items-center space-x-1">
-              <Flame className="w-3 h-3" />
-              <span>{recipe.calories} cal</span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2 mb-3">
-            <span className={`px-2 py-1 text-xs font-medium rounded border flex items-center space-x-1 ${getDifficultyStyle(recipe.difficulty)}`}>
-              {getCategoryIcon(recipe.category)}
-              <span className="capitalize">{recipe.category}</span>
-            </span>
-            <span className="px-2 py-1 text-xs bg-white/5 text-white/60 rounded border border-white/10 capitalize">
-              {recipe.difficulty}
-            </span>
-          </div>
-
-          <div className="flex items-center space-x-2 mb-3">
-            <div className="flex items-center space-x-1">
-              {renderStars(recipe.rating)}
-            </div>
-            {recipe.timesCooked > 0 && (
-              <span className="text-xs text-white/40">
-                Cooked {recipe.timesCooked} time{recipe.timesCooked !== 1 ? 's' : ''}
-              </span>
+            {course.actualHours > 0 && (
+              <div className="flex items-center space-x-1">
+                <TrendingUp className="w-3 h-3" />
+                <span>{course.actualHours}h learned</span>
+              </div>
             )}
           </div>
+
+          <div className="flex items-center space-x-2 mb-3">
+            <span className={`px-2 py-1 text-xs font-medium rounded border flex items-center space-x-1 ${getDifficultyStyle(course.difficulty)}`}>
+              {getCategoryIcon(course.category)}
+              <span className="capitalize">{course.category.replace('-', ' ')}</span>
+            </span>
+            <span className={`px-2 py-1 text-xs rounded border capitalize ${getStatusStyle(course.status)}`}>
+              {course.status.replace('-', ' ')}
+            </span>
+            <span className="px-2 py-1 text-xs bg-white/5 text-white/60 rounded border border-white/10 capitalize">
+              {course.difficulty}
+            </span>
+          </div>
+
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs text-white/60">Progress</span>
+              <span className="text-xs text-white">{Math.round(course.progress)}%</span>
+            </div>
+            <div className="w-full bg-white/10 rounded-full h-2">
+              <motion.div 
+                className="bg-white h-2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${course.progress}%` }}
+                transition={{ duration: 0.8, delay: 0.2 }}
+              />
+            </div>
+          </div>
+
+          {course.rating > 0 && (
+            <div className="flex items-center space-x-2 mb-3">
+              <div className="flex items-center space-x-1">
+                {renderStars(course.rating)}
+              </div>
+              <span className="text-xs text-white/40">
+                {course.completedLessons}/{course.totalLessons} lessons completed
+              </span>
+            </div>
+          )}
+
+          {course.skills.length > 0 && (
+            <div className="mb-3">
+              <div className="text-xs text-white/60 mb-1">Skills:</div>
+              <div className="flex flex-wrap gap-1">
+                {course.skills.slice(0, 3).map((skill, index) => (
+                  <span key={index} className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded border border-white/10">
+                    {skill}
+                  </span>
+                ))}
+                {course.skills.length > 3 && (
+                  <span className="text-xs text-white/40">+{course.skills.length - 3} more</span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -262,52 +311,35 @@ const RecipeCard = ({
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onToggleFavorite(recipe.id)
+              onToggleFavorite(course.id)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <Heart className={`w-4 h-4 ${recipe.isFavorite ? 'text-white fill-current' : 'text-white/40'}`} />
+            <Star className={`w-4 h-4 ${course.isFavorite ? 'text-white fill-current' : 'text-white/40'}`} />
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onEdit(recipe)
+              onEdit(course)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <svg className="w-4 h-4 text-white/40 hover:text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
+            <Edit className="w-4 h-4 text-white/40 hover:text-white" />
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onDelete(recipe.id)
+              onDelete(course.id)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <svg className="w-4 h-4 text-white/40 hover:text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9zM4 5a2 2 0 012-2h8a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 102 0v3a1 1 0 11-2 0V9zm4 0a1 1 0 10-2 0v3a1 1 0 102 0V9z" clipRule="evenodd" />
-            </svg>
+            <Trash2 className="w-4 h-4 text-white/40 hover:text-white" />
           </motion.button>
         </div>
-      </div>
-
-      <div className="space-y-2 mb-4">
-        <div className="text-xs text-white/60 mb-1">Ingredients preview:</div>
-        {recipe.ingredients.slice(0, 3).map((ingredient, index) => (
-          <div key={index} className="flex items-center space-x-2 text-sm text-white/70">
-            <div className="w-1 h-1 bg-white/40 rounded-full"></div>
-            <span>{ingredient.amount} {ingredient.unit} {ingredient.name}</span>
-          </div>
-        ))}
-        {recipe.ingredients.length > 3 && (
-          <div className="text-xs text-white/40">+{recipe.ingredients.length - 3} more ingredients</div>
-        )}
       </div>
 
       <motion.button
@@ -315,133 +347,147 @@ const RecipeCard = ({
         whileTap={{ scale: 0.98 }}
         onClick={(e) => {
           e.stopPropagation()
-          onCook(recipe)
+          onStart(course)
         }}
         className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
       >
-        <Play className="w-4 h-4" />
-        <span>Start Cooking</span>
+        {course.status === 'completed' ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Review Course</span>
+          </>
+        ) : course.status === 'in-progress' ? (
+          <>
+            <Play className="w-4 h-4" />
+            <span>Continue Learning</span>
+          </>
+        ) : (
+          <>
+            <Play className="w-4 h-4" />
+            <span>Start Course</span>
+          </>
+        )}
       </motion.button>
     </motion.div>
   )
 }
 
-// Recipe Editor Modal
-const RecipeEditor = ({
-  recipe,
+// Course Editor Modal
+const CourseEditor = ({
+  course,
   isOpen,
   onClose,
   onSave,
 }: {
-  recipe: Recipe | null
+  course: Course | null
   isOpen: boolean
   onClose: () => void
-  onSave: (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'timesCooked'>) => void
+  onSave: (courseData: Omit<Course, 'id' | 'createdAt'>) => void
 }) => {
   const [formData, setFormData] = useState({
-    name: '',
+    title: '',
     description: '',
-    category: 'dinner',
-    difficulty: 'medium' as 'easy' | 'medium' | 'hard',
-    prepTime: 15,
-    cookTime: 30,
-    servings: 4,
-    calories: 300,
+    instructor: '',
+    category: 'programming',
+    difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
+    totalLessons: 10,
+    estimatedHours: 5,
     isFavorite: false,
+    certificate: false,
     rating: 0,
+    status: 'not-started' as 'not-started' | 'in-progress' | 'completed' | 'paused',
   })
 
-  const [ingredients, setIngredients] = useState<Ingredient[]>([])
-  const [instructions, setInstructions] = useState<string[]>([''])
-  const [tags, setTags] = useState<string[]>([])
-  const [tagInput, setTagInput] = useState('')
+  const [skills, setSkills] = useState<string[]>([])
+  const [skillInput, setSkillInput] = useState('')
+  const [lessons, setLessons] = useState<Lesson[]>([])
 
   useEffect(() => {
-    if (recipe) {
+    if (course) {
       setFormData({
-        name: recipe.name,
-        description: recipe.description,
-        category: recipe.category,
-        difficulty: recipe.difficulty,
-        prepTime: recipe.prepTime,
-        cookTime: recipe.cookTime,
-        servings: recipe.servings,
-        calories: recipe.calories,
-        isFavorite: recipe.isFavorite,
-        rating: recipe.rating,
+        title: course.title,
+        description: course.description,
+        instructor: course.instructor,
+        category: course.category,
+        difficulty: course.difficulty,
+        totalLessons: course.totalLessons,
+        estimatedHours: course.estimatedHours,
+        isFavorite: course.isFavorite,
+        certificate: course.certificate,
+        rating: course.rating,
+        status: course.status,
       })
-      setIngredients(recipe.ingredients)
-      setInstructions(recipe.instructions)
-      setTags(recipe.tags)
+      setSkills(course.skills)
+      setLessons(course.lessons)
     } else {
       setFormData({
-        name: '',
+        title: '',
         description: '',
-        category: 'dinner',
-        difficulty: 'medium',
-        prepTime: 15,
-        cookTime: 30,
-        servings: 4,
-        calories: 300,
+        instructor: '',
+        category: 'programming',
+        difficulty: 'intermediate',
+        totalLessons: 10,
+        estimatedHours: 5,
         isFavorite: false,
+        certificate: false,
         rating: 0,
+        status: 'not-started',
       })
-      setIngredients([])
-      setInstructions([''])
-      setTags([])
+      setSkills([])
+      setLessons([])
     }
-  }, [recipe, isOpen])
+  }, [course, isOpen])
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.name.trim()) return
+  const handleSubmit = () => {
+    if (!formData.title.trim()) return
+
+    const progress = lessons.length > 0 
+      ? (lessons.filter(l => l.completed).length / lessons.length) * 100 
+      : 0
 
     onSave({
       ...formData,
-      ingredients,
-      instructions: instructions.filter(i => i.trim()),
-      tags,
+      skills,
+      lessons,
+      progress,
+      completedLessons: lessons.filter(l => l.completed).length,
+      actualHours: 0,
+      startDate: formData.status !== 'not-started' ? new Date() : undefined,
+      completedDate: formData.status === 'completed' ? new Date() : undefined,
     })
     onClose()
   }
 
-  const addIngredient = () => {
-    setIngredients(prev => [...prev, { name: '', amount: 1, unit: 'cup', category: 'other' }])
-  }
-
-  const removeIngredient = (index: number) => {
-    setIngredients(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const updateIngredient = (index: number, field: keyof Ingredient, value: string | number) => {
-    setIngredients(prev => prev.map((ingredient, i) => 
-      i === index ? { ...ingredient, [field]: value } : ingredient
-    ))
-  }
-
-  const addInstruction = () => {
-    setInstructions(prev => [...prev, ''])
-  }
-
-  const removeInstruction = (index: number) => {
-    setInstructions(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const updateInstruction = (index: number, value: string) => {
-    setInstructions(prev => prev.map((instruction, i) => 
-      i === index ? value : instruction
-    ))
-  }
-
-  const addTag = () => {
-    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
-      setTags(prev => [...prev, tagInput.trim()])
-      setTagInput('')
+  const addSkill = () => {
+    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
+      setSkills(prev => [...prev, skillInput.trim()])
+      setSkillInput('')
     }
   }
 
-  const removeTag = (tag: string) => {
-    setTags(prev => prev.filter(t => t !== tag))
+  const removeSkill = (skill: string) => {
+    setSkills(prev => prev.filter(s => s !== skill))
+  }
+
+  const addLesson = () => {
+    setLessons(prev => [...prev, {
+      id: Date.now().toString(),
+      title: '',
+      type: 'video',
+      duration: 30,
+      completed: false,
+      notes: ''
+    }])
+  }
+
+  const removeLesson = (index: number) => {
+    setLessons(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const updateLesson = (index: number, field: keyof Lesson, value: any) => {
+    setLessons(prev => prev.map((lesson, i) => 
+      i === index ? { ...lesson, [field]: value } : lesson
+    ))
   }
 
   if (!isOpen) return null
@@ -461,8 +507,8 @@ const RecipeEditor = ({
       >
         <div className="flex items-center justify-between p-6 border-b border-white/20">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <ChefHat className="w-5 h-5" />
-            <span>{recipe ? 'Edit Recipe' : 'Create Recipe'}</span>
+            <GraduationCap className="w-5 h-5" />
+            <span>{course ? 'Edit Course' : 'Add Course'}</span>
           </h2>
           <button
             onClick={onClose}
@@ -474,37 +520,29 @@ const RecipeEditor = ({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Recipe Name</label>
+              <label className="block text-sm font-medium text-white mb-2">Course Title</label>
               <input
                 type="text"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="e.g., Spaghetti Carbonara"
+                placeholder="e.g., React Complete Guide"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Category</label>
-              <select
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              >
-                <option value="breakfast">Breakfast</option>
-                <option value="lunch">Lunch</option>
-                <option value="dinner">Dinner</option>
-                <option value="dessert">Dessert</option>
-                <option value="snack">Snack</option>
-                <option value="vegetarian">Vegetarian</option>
-                <option value="meat">Meat</option>
-                <option value="seafood">Seafood</option>
-                <option value="other">Other</option>
-              </select>
+              <label className="block text-sm font-medium text-white mb-2">Instructor</label>
+              <input
+                type="text"
+                value={formData.instructor}
+                onChange={(e) => setFormData(prev => ({ ...prev, instructor: e.target.value }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
+                placeholder="e.g., John Doe"
+              />
             </div>
           </div>
 
@@ -514,69 +552,81 @@ const RecipeEditor = ({
               value={formData.description}
               onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
               className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-              placeholder="Describe your recipe..."
+              placeholder="Describe what you'll learn in this course..."
               rows={2}
             />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Prep Time (min)</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.prepTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, prepTime: parseInt(e.target.value) || 0 }))}
+              <label className="block text-sm font-medium text-white mb-2">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              />
+              >
+                <option value="programming">Programming</option>
+                <option value="web-development">Web Development</option>
+                <option value="mobile-development">Mobile Development</option>
+                <option value="design">Design</option>
+                <option value="business">Business</option>
+                <option value="marketing">Marketing</option>
+                <option value="data-science">Data Science</option>
+                <option value="ai">AI & Machine Learning</option>
+                <option value="other">Other</option>
+              </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Cook Time (min)</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.cookTime}
-                onChange={(e) => setFormData(prev => ({ ...prev, cookTime: parseInt(e.target.value) || 0 }))}
-                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Servings</label>
-              <input
-                type="number"
-                min="1"
-                value={formData.servings}
-                onChange={(e) => setFormData(prev => ({ ...prev, servings: parseInt(e.target.value) || 1 }))}
-                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-white mb-2">Calories</label>
-              <input
-                type="number"
-                min="0"
-                value={formData.calories}
-                onChange={(e) => setFormData(prev => ({ ...prev, calories: parseInt(e.target.value) || 0 }))}
-                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-white mb-2">Difficulty</label>
               <select
                 value={formData.difficulty}
-                onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as 'easy' | 'medium' | 'hard' }))}
+                onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as 'beginner' | 'intermediate' | 'advanced' }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               >
-                <option value="easy">Easy</option>
-                <option value="medium">Medium</option>
-                <option value="hard">Hard</option>
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'not-started' | 'in-progress' | 'completed' | 'paused' }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              >
+                <option value="not-started">Not Started</option>
+                <option value="in-progress">In Progress</option>
+                <option value="paused">Paused</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Total Lessons</label>
+              <input
+                type="number"
+                min="1"
+                value={formData.totalLessons}
+                onChange={(e) => setFormData(prev => ({ ...prev, totalLessons: parseInt(e.target.value) || 1 }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Est. Hours</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={formData.estimatedHours}
+                onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: parseFloat(e.target.value) || 0 }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
             </div>
 
             <div>
@@ -597,129 +647,40 @@ const RecipeEditor = ({
           </div>
 
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Ingredients</h3>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={addIngredient}
-                className="px-3 py-1 bg-white/10 border border-white/20 text-white rounded hover:bg-white/20 transition-colors text-sm"
-              >
-                Add Ingredient
-              </motion.button>
-            </div>
-
-            <div className="space-y-3">
-              {ingredients.map((ingredient, index) => (
-                <div key={index} className="grid grid-cols-4 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Ingredient"
-                    value={ingredient.name}
-                    onChange={(e) => updateIngredient(index, 'name', e.target.value)}
-                    className="px-3 py-2 bg-black border border-white/20 rounded text-white placeholder-white/40 text-sm"
-                  />
-                  <input
-                    type="number"
-                    placeholder="Amount"
-                    value={ingredient.amount}
-                    onChange={(e) => updateIngredient(index, 'amount', parseFloat(e.target.value) || 0)}
-                    className="px-3 py-2 bg-black border border-white/20 rounded text-white placeholder-white/40 text-sm"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Unit"
-                    value={ingredient.unit}
-                    onChange={(e) => updateIngredient(index, 'unit', e.target.value)}
-                    className="px-3 py-2 bg-black border border-white/20 rounded text-white placeholder-white/40 text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeIngredient(index)}
-                    className="px-3 py-2 bg-white/5 border border-white/20 text-white/60 rounded hover:bg-white/10 transition-colors text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Instructions</h3>
-              <motion.button
-                type="button"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={addInstruction}
-                className="px-3 py-1 bg-white/10 border border-white/20 text-white rounded hover:bg-white/20 transition-colors text-sm"
-              >
-                Add Step
-              </motion.button>
-            </div>
-
-            <div className="space-y-3">
-              {instructions.map((instruction, index) => (
-                <div key={index} className="flex space-x-2">
-                  <div className="flex-shrink-0 w-8 h-8 bg-white/10 border border-white/20 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                    {index + 1}
-                  </div>
-                  <textarea
-                    placeholder={`Step ${index + 1}...`}
-                    value={instruction}
-                    onChange={(e) => updateInstruction(index, e.target.value)}
-                    className="flex-1 px-3 py-2 bg-black border border-white/20 rounded text-white placeholder-white/40 text-sm"
-                    rows={2}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeInstruction(index)}
-                    className="flex-shrink-0 px-3 py-2 bg-white/5 border border-white/20 text-white/60 rounded hover:bg-white/10 transition-colors text-sm"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Tags</label>
+            <label className="block text-sm font-medium text-white mb-2">Skills You'll Learn</label>
             <div className="flex space-x-2 mb-3">
               <input
                 type="text"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                value={skillInput}
+                onChange={(e) => setSkillInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addSkill()}
                 className="flex-1 px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="Add tags..."
+                placeholder="Add skills..."
               />
               <motion.button
                 type="button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={addTag}
+                onClick={addSkill}
                 className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors text-white"
               >
                 Add
               </motion.button>
             </div>
 
-            {tags.length > 0 && (
+            {skills.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
+                {skills.map((skill) => (
                   <motion.span
-                    key={tag}
+                    key={skill}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex items-center space-x-2 px-3 py-1 bg-white/10 text-white rounded-full text-sm border border-white/20"
                   >
-                    <span>{tag}</span>
+                    <span>{skill}</span>
                     <button
                       type="button"
-                      onClick={() => removeTag(tag)}
+                      onClick={() => removeSkill(skill)}
                       className="text-white/60 hover:text-white"
                     >
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -732,17 +693,31 @@ const RecipeEditor = ({
             )}
           </div>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="favorite"
-              checked={formData.isFavorite}
-              onChange={(e) => setFormData(prev => ({ ...prev, isFavorite: e.target.checked }))}
-              className="w-4 h-4 rounded border-white/20"
-            />
-            <label htmlFor="favorite" className="text-sm font-medium text-white flex items-center space-x-1">
-              <Heart className="w-4 h-4" />
-              <span>Add to favorites</span>
+          <div className="flex items-center space-x-4">
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isFavorite}
+                onChange={(e) => setFormData(prev => ({ ...prev, isFavorite: e.target.checked }))}
+                className="w-4 h-4 rounded border-white/20"
+              />
+              <span className="text-sm text-white flex items-center space-x-1">
+                <Star className="w-4 h-4" />
+                <span>Add to favorites</span>
+              </span>
+            </label>
+
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.certificate}
+                onChange={(e) => setFormData(prev => ({ ...prev, certificate: e.target.checked }))}
+                className="w-4 h-4 rounded border-white/20"
+              />
+              <span className="text-sm text-white flex items-center space-x-1">
+                <Award className="w-4 h-4" />
+                <span>Offers certificate</span>
+              </span>
             </label>
           </div>
 
@@ -750,22 +725,21 @@ const RecipeEditor = ({
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              type="submit"
+              onClick={handleSubmit}
               className="flex-1 bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors"
             >
-              {recipe ? 'Update Recipe' : 'Create Recipe'}
+              {course ? 'Update Course' : 'Add Course'}
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              type="button"
               onClick={onClose}
               className="flex-1 bg-black border border-white/20 text-white py-3 rounded-lg font-medium hover:bg-white/10 transition-colors"
             >
               Cancel
             </motion.button>
           </div>
-        </form>
+        </div>
       </motion.div>
     </motion.div>
   )
@@ -788,7 +762,7 @@ const SearchAndFilters = ({
     >
       <div className="flex items-center space-x-2 mb-4">
         <Search className="w-5 h-5 text-white" />
-        <h3 className="font-semibold text-white">Search & Filter Recipes</h3>
+        <h3 className="font-semibold text-white">Search & Filter Courses</h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -801,7 +775,7 @@ const SearchAndFilters = ({
               value={filters.searchQuery}
               onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
               className="w-full pl-10 pr-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-              placeholder="Search recipes..."
+              placeholder="Search courses..."
             />
           </div>
         </div>
@@ -814,14 +788,14 @@ const SearchAndFilters = ({
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
             <option value="">All Categories</option>
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="dinner">Dinner</option>
-            <option value="dessert">Dessert</option>
-            <option value="snack">Snack</option>
-            <option value="vegetarian">Vegetarian</option>
-            <option value="meat">Meat</option>
-            <option value="seafood">Seafood</option>
+            <option value="programming">Programming</option>
+            <option value="web-development">Web Development</option>
+            <option value="mobile-development">Mobile Development</option>
+            <option value="design">Design</option>
+            <option value="business">Business</option>
+            <option value="marketing">Marketing</option>
+            <option value="data-science">Data Science</option>
+            <option value="ai">AI & Machine Learning</option>
           </select>
         </div>
 
@@ -833,24 +807,24 @@ const SearchAndFilters = ({
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
             <option value="">All Difficulties</option>
-            <option value="easy">Easy</option>
-            <option value="medium">Medium</option>
-            <option value="hard">Hard</option>
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">Max Time</label>
+          <label className="block text-sm font-medium text-white mb-2">Status</label>
           <select
-            value={filters.maxTime}
-            onChange={(e) => onFilterChange({ ...filters, maxTime: e.target.value })}
+            value={filters.status}
+            onChange={(e) => onFilterChange({ ...filters, status: e.target.value })}
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
-            <option value="">Any Time</option>
-            <option value="15">Under 15 min</option>
-            <option value="30">Under 30 min</option>
-            <option value="60">Under 1 hour</option>
-            <option value="120">Under 2 hours</option>
+            <option value="">All Status</option>
+            <option value="not-started">Not Started</option>
+            <option value="in-progress">In Progress</option>
+            <option value="paused">Paused</option>
+            <option value="completed">Completed</option>
           </select>
         </div>
       </div>
@@ -864,7 +838,7 @@ const SearchAndFilters = ({
             className="w-4 h-4 rounded border-white/20"
           />
           <span className="text-sm text-white flex items-center space-x-1">
-            <Heart className="w-4 h-4" />
+            <Star className="w-4 h-4" />
             <span>Favorites only</span>
           </span>
         </label>
@@ -874,108 +848,112 @@ const SearchAndFilters = ({
 }
 
 // Main App Component
-export default function RecipeTracker() {
-  const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>([])
+export default function LearningTracker() {
+  const [courses, setCourses] = useState<Course[]>([])
+  const [goals, setGoals] = useState<LearningGoal[]>([])
   const [filters, setFilters] = useState<FilterState>({
     category: '',
     difficulty: '',
-    maxTime: '',
+    status: '',
     favorites: false,
     searchQuery: '',
   })
   const [isEditorOpen, setIsEditorOpen] = useState(false)
-  const [editingRecipe, setEditingRecipe] = useState<Recipe | null>(null)
-  const [viewingRecipe, setViewingRecipe] = useState<Recipe | null>(null)
+  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
+  const [viewingCourse, setViewingCourse] = useState<Course | null>(null)
 
-  // Load recipes from localStorage
+  // Load courses from localStorage
   useEffect(() => {
-    const savedRecipes = localStorage.getItem('recipes')
-    if (savedRecipes) {
-      const parsedRecipes = JSON.parse(savedRecipes).map((recipe: any) => ({
-        ...recipe,
-        createdAt: new Date(recipe.createdAt),
+    const savedCourses = localStorage.getItem('courses')
+    if (savedCourses) {
+      const parsedCourses = JSON.parse(savedCourses).map((course: any) => ({
+        ...course,
+        createdAt: new Date(course.createdAt),
+        startDate: course.startDate ? new Date(course.startDate) : undefined,
+        completedDate: course.completedDate ? new Date(course.completedDate) : undefined,
+        targetDate: course.targetDate ? new Date(course.targetDate) : undefined,
       }))
-      setRecipes(parsedRecipes)
+      setCourses(parsedCourses)
     }
   }, [])
 
-  // Save recipes to localStorage
+  // Save courses to localStorage
   useEffect(() => {
-    if (recipes.length > 0) {
-      localStorage.setItem('recipes', JSON.stringify(recipes))
+    if (courses.length > 0) {
+      localStorage.setItem('courses', JSON.stringify(courses))
     }
-  }, [recipes])
+  }, [courses])
 
-  const createRecipe = () => {
-    setEditingRecipe(null)
+  const createCourse = () => {
+    setEditingCourse(null)
     setIsEditorOpen(true)
   }
 
-  const editRecipe = (recipe: Recipe) => {
-    setEditingRecipe(recipe)
+  const editCourse = (course: Course) => {
+    setEditingCourse(course)
     setIsEditorOpen(true)
   }
 
-  const viewRecipe = (recipe: Recipe) => {
-    setViewingRecipe(recipe)
+  const viewCourse = (course: Course) => {
+    setViewingCourse(course)
   }
 
-  const cookRecipe = (recipe: Recipe) => {
-    // Increment times cooked
-    setRecipes(prev => prev.map(r => 
-      r.id === recipe.id 
-        ? { ...r, timesCooked: r.timesCooked + 1 }
-        : r
+  const startCourse = (course: Course) => {
+    setCourses(prev => prev.map(c => 
+      c.id === course.id 
+        ? { 
+            ...c, 
+            status: c.status === 'not-started' ? 'in-progress' : c.status,
+            startDate: c.startDate || new Date(),
+            actualHours: c.actualHours + 0.5
+          }
+        : c
     ))
   }
 
-  const saveRecipe = (recipeData: Omit<Recipe, 'id' | 'createdAt' | 'timesCooked'>) => {
-    if (editingRecipe) {
-      // Update existing recipe
-      setRecipes(prev => prev.map(recipe => 
-        recipe.id === editingRecipe.id 
-          ? { ...recipe, ...recipeData }
-          : recipe
+  const saveCourse = (courseData: Omit<Course, 'id' | 'createdAt'>) => {
+    if (editingCourse) {
+      // Update existing course
+      setCourses(prev => prev.map(course => 
+        course.id === editingCourse.id 
+          ? { ...course, ...courseData }
+          : course
       ))
     } else {
-      // Create new recipe
-      const newRecipe: Recipe = {
-        ...recipeData,
+      // Create new course
+      const newCourse: Course = {
+        ...courseData,
         id: Date.now().toString(),
         createdAt: new Date(),
-        timesCooked: 0,
+        lessons: [],
       }
-      setRecipes(prev => [newRecipe, ...prev])
+      setCourses(prev => [newCourse, ...prev])
     }
   }
 
   const toggleFavorite = (id: string) => {
-    setRecipes(prev => prev.map(recipe =>
-      recipe.id === id ? { ...recipe, isFavorite: !recipe.isFavorite } : recipe
+    setCourses(prev => prev.map(course =>
+      course.id === id ? { ...course, isFavorite: !course.isFavorite } : course
     ))
   }
 
-  const deleteRecipe = (id: string) => {
-    setRecipes(prev => prev.filter(recipe => recipe.id !== id))
+  const deleteCourse = (id: string) => {
+    setCourses(prev => prev.filter(course => course.id !== id))
   }
 
-  // Filter recipes
-  const filteredRecipes = recipes.filter(recipe => {
-    if (filters.category && recipe.category !== filters.category) return false
-    if (filters.difficulty && recipe.difficulty !== filters.difficulty) return false
-    if (filters.favorites && !recipe.isFavorite) return false
-    if (filters.maxTime) {
-      const totalTime = recipe.prepTime + recipe.cookTime
-      if (totalTime > parseInt(filters.maxTime)) return false
-    }
+  // Filter courses
+  const filteredCourses = courses.filter(course => {
+    if (filters.category && course.category !== filters.category) return false
+    if (filters.difficulty && course.difficulty !== filters.difficulty) return false
+    if (filters.status && course.status !== filters.status) return false
+    if (filters.favorites && !course.isFavorite) return false
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase()
       return (
-        recipe.name.toLowerCase().includes(query) ||
-        recipe.description.toLowerCase().includes(query) ||
-        recipe.tags.some(tag => tag.toLowerCase().includes(query)) ||
-        recipe.ingredients.some(ing => ing.name.toLowerCase().includes(query))
+        course.title.toLowerCase().includes(query) ||
+        course.instructor.toLowerCase().includes(query) ||
+        course.description.toLowerCase().includes(query) ||
+        course.skills.some(skill => skill.toLowerCase().includes(query))
       )
     }
     return true
@@ -986,9 +964,9 @@ export default function RecipeTracker() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
-        <RecipeStats recipes={recipes} mealPlans={mealPlans} />
+        <LearningStats courses={courses} goals={goals} />
 
-        {/* Create Recipe Button */}
+        {/* Create Course Button */}
         <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
@@ -998,59 +976,59 @@ export default function RecipeTracker() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={createRecipe}
+            onClick={createCourse}
             className="w-full bg-white text-black py-4 rounded-lg font-semibold hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Create New Recipe</span>
+            <span>Add New Course</span>
           </motion.button>
         </motion.div>
 
         <SearchAndFilters filters={filters} onFilterChange={setFilters} />
 
-        {/* Recipes Grid */}
+        {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {filteredRecipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onView={viewRecipe}
-                onCook={cookRecipe}
+            {filteredCourses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                onView={viewCourse}
+                onStart={startCourse}
                 onToggleFavorite={toggleFavorite}
-                onEdit={editRecipe}
-                onDelete={deleteRecipe}
+                onEdit={editCourse}
+                onDelete={deleteCourse}
               />
             ))}
           </AnimatePresence>
         </div>
 
         {/* Empty State */}
-        {filteredRecipes.length === 0 && (
+        {filteredCourses.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <div className="text-white/20 text-6xl mb-4">👨‍🍳</div>
-            <h3 className="text-xl font-semibold text-white mb-2">No recipes found</h3>
+            <div className="text-white/20 text-6xl mb-4">🎓</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No courses found</h3>
             <p className="text-white/60">
-              {recipes.length === 0
-                ? 'Create your first recipe to start your culinary journey!'
+              {courses.length === 0
+                ? 'Add your first course to start your learning journey!'
                 : 'Try adjusting your search or filters.'}
             </p>
           </motion.div>
         )}
       </div>
 
-      {/* Recipe Editor Modal */}
+      {/* Course Editor Modal */}
       <AnimatePresence>
         {isEditorOpen && (
-          <RecipeEditor
-            recipe={editingRecipe}
+          <CourseEditor
+            course={editingCourse}
             isOpen={isEditorOpen}
             onClose={() => setIsEditorOpen(false)}
-            onSave={saveRecipe}
+            onSave={saveCourse}
           />
         )}
       </AnimatePresence>
