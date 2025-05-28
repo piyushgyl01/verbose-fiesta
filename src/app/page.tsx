@@ -3,63 +3,74 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  GraduationCap, Plus, Clock, BookOpen, Trophy, Star, Play,
-  Pause, CheckCircle2, Circle, Target, TrendingUp, Calendar,
-  Filter, Search, Video, FileText, Award, Brain, Code,
-  Palette, DollarSign, Users, Globe, Laptop, Phone,
-  Zap, BarChart3, Settings, Eye, EyeOff, Edit, Trash2
+  Music, Plus, Clock, Heart, Star, Play, Pause, SkipForward,
+  SkipBack, Volume2, Shuffle, Repeat, Headphones, Mic2,
+  Album, Users, TrendingUp, Calendar, Filter, Search,
+  User, Globe, Award, Eye, EyeOff, Edit, Trash2, Radio,
+  Disc3, Guitar, Piano, Circle, Zap, Coffee, Moon, Sun,
+  Target, BarChart3, Waves, Settings, Share2, Download
 } from 'lucide-react'
 
-interface Lesson {
+interface Song {
   id: string
   title: string
-  type: 'video' | 'reading' | 'exercise' | 'quiz'
-  duration: number // in minutes
-  completed: boolean
-  notes: string
-}
-
-interface Course {
-  id: string
-  title: string
-  description: string
-  instructor: string
-  category: string
-  difficulty: 'beginner' | 'intermediate' | 'advanced'
-  totalLessons: number
-  completedLessons: number
-  estimatedHours: number
-  actualHours: number
-  progress: number // 0-100
+  artist: string
+  album: string
+  genre: string
+  duration: number // in seconds
+  releaseYear: number
+  playCount: number
   rating: number // 0-5
-  status: 'not-started' | 'in-progress' | 'completed' | 'paused'
-  startDate?: Date
-  completedDate?: Date
-  targetDate?: Date
-  skills: string[]
-  lessons: Lesson[]
-  certificate: boolean
-  certificateUrl?: string
   isFavorite: boolean
+  mood: string
+  energy: 'low' | 'medium' | 'high'
+  language: string
+  explicit: boolean
+  dateAdded: Date
+  lastPlayed?: Date
+  tags: string[]
+  lyrics?: string
+  notes: string
+  fileFormat: 'mp3' | 'flac' | 'wav' | 'aac'
+  bitrate: number
+  fileSize: number // in MB
+  albumArtColor: string
   createdAt: Date
 }
 
-interface LearningGoal {
+interface Playlist {
   id: string
-  title: string
+  name: string
   description: string
-  targetDate: Date
-  courses: string[] // course IDs
-  progress: number
-  completed: boolean
+  songIds: string[]
+  totalDuration: number
+  songCount: number
+  isPublic: boolean
+  isFavorite: boolean
+  mood: string
+  tags: string[]
+  createdAt: Date
+  lastModified: Date
+  playCount: number
+}
+
+interface Artist {
+  id: string
+  name: string
+  genre: string
+  songCount: number
+  totalPlayCount: number
+  isFavorite: boolean
 }
 
 interface FilterState {
-  category: string
-  difficulty: string
-  status: string
+  genre: string
+  mood: string
+  energy: string
+  artist: string
   favorites: boolean
   searchQuery: string
+  year: string
 }
 
 // Header Component
@@ -77,13 +88,13 @@ const Header = () => {
             className="flex items-center space-x-3"
             whileHover={{ scale: 1.05 }}
           >
-            <GraduationCap className="w-8 h-8 text-white" />
-            <h1 className="text-2xl font-bold text-white">LearnFlow</h1>
+            <Music className="w-8 h-8 text-white" />
+            <h1 className="text-2xl font-bold text-white">MusicFlow</h1>
           </motion.div>
           <div className="flex items-center space-x-4">
             <div className="hidden md:flex items-center space-x-2 text-sm text-white/60">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-              <span>Keep learning</span>
+              <span>Keep listening</span>
             </div>
           </div>
         </div>
@@ -92,14 +103,16 @@ const Header = () => {
   )
 }
 
-// Learning Stats Dashboard
-const LearningStats = ({ courses, goals }: { courses: Course[], goals: LearningGoal[] }) => {
-  const totalCourses = courses.length
-  const completedCourses = courses.filter(c => c.status === 'completed').length
-  const inProgressCourses = courses.filter(c => c.status === 'in-progress').length
-  const totalHoursLearned = courses.reduce((sum, c) => sum + c.actualHours, 0)
-  const avgProgress = courses.length > 0 
-    ? courses.reduce((sum, c) => sum + c.progress, 0) / courses.length 
+// Music Stats Dashboard
+const MusicStats = ({ songs, playlists }: { songs: Song[], playlists: Playlist[] }) => {
+  const totalSongs = songs.length
+  const totalPlaylists = playlists.length
+  const favoriteSongs = songs.filter(s => s.isFavorite).length
+  const totalPlayTime = songs.reduce((sum, s) => sum + s.duration * s.playCount, 0)
+  const totalHours = Math.round(totalPlayTime / 3600)
+  const uniqueArtists = new Set(songs.map(s => s.artist)).size
+  const avgRating = songs.filter(s => s.rating > 0).length > 0 
+    ? songs.filter(s => s.rating > 0).reduce((sum, s) => sum + s.rating, 0) / songs.filter(s => s.rating > 0).length 
     : 0
 
   return (
@@ -110,88 +123,112 @@ const LearningStats = ({ courses, goals }: { courses: Course[], goals: LearningG
       transition={{ delay: 0.1 }}
     >
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{totalCourses}</div>
+        <div className="text-2xl font-bold text-white">{totalSongs}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <BookOpen className="w-3 h-3" />
-          <span>Total Courses</span>
+          <Music className="w-3 h-3" />
+          <span>Total Songs</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{completedCourses}</div>
+        <div className="text-2xl font-bold text-white">{totalPlaylists}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <Trophy className="w-3 h-3" />
-          <span>Completed</span>
+          <Album className="w-3 h-3" />
+          <span>Playlists</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{inProgressCourses}</div>
+        <div className="text-2xl font-bold text-white">{uniqueArtists}</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <Play className="w-3 h-3" />
-          <span>In Progress</span>
+          <Users className="w-3 h-3" />
+          <span>Artists</span>
         </div>
       </div>
       
       <div className="bg-black border border-white/20 rounded-lg p-4 text-center">
-        <div className="text-2xl font-bold text-white">{Math.round(totalHoursLearned)}h</div>
+        <div className="text-2xl font-bold text-white">{totalHours}h</div>
         <div className="text-white/60 text-sm flex items-center justify-center space-x-1">
-          <Clock className="w-3 h-3" />
-          <span>Hours Learned</span>
+          <Headphones className="w-3 h-3" />
+          <span>Listening Time</span>
         </div>
       </div>
     </motion.div>
   )
 }
 
-// Course Card Component
-const CourseCard = ({
-  course,
+// Song Card Component
+const SongCard = ({
+  song,
   onView,
-  onStart,
+  onPlay,
   onToggleFavorite,
   onEdit,
   onDelete,
 }: {
-  course: Course
-  onView: (course: Course) => void
-  onStart: (course: Course) => void
+  song: Song
+  onView: (song: Song) => void
+  onPlay: (song: Song) => void
   onToggleFavorite: (id: string) => void
-  onEdit: (course: Course) => void
+  onEdit: (song: Song) => void
   onDelete: (id: string) => void
 }) => {
-  const getCategoryIcon = (category: string) => {
+  const getGenreIcon = (genre: string) => {
     const icons = {
-      programming: Code,
-      design: Palette,
-      business: DollarSign,
-      marketing: TrendingUp,
-      'data-science': BarChart3,
-      'web-development': Globe,
-      'mobile-development': Phone,
-      ai: Brain,
-      other: BookOpen,
+      rock: Guitar,
+      pop: Mic2,
+      jazz: Piano,
+      electronic: Zap,
+      classical: Piano,
+      'hip-hop': Mic2,
+      country: Guitar,
+      folk: Guitar,
+      blues: Guitar,
+      reggae: Guitar,
+      metal: Guitar,
+      indie: Guitar,
+      alternative: Guitar,
+      funk: Circle,
+      disco: Disc3,
+      other: Music,
     }
-    const Icon = icons[category as keyof typeof icons] || BookOpen
+    const Icon = icons[genre.toLowerCase() as keyof typeof icons] || Music
     return <Icon className="w-4 h-4" />
   }
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'completed': return 'bg-white/20 text-white border-white/40'
-      case 'in-progress': return 'bg-white/15 text-white border-white/30'
-      case 'paused': return 'bg-white/10 text-white border-white/20'
-      default: return 'bg-white/5 text-white/60 border-white/10'
+  const getMoodIcon = (mood: string) => {
+    const icons = {
+      happy: Sun,
+      sad: Moon,
+      energetic: Zap,
+      chill: Coffee,
+      romantic: Heart,
+      party: Disc3,
+      workout: Target,
+      focus: Target,
+      other: Music,
+    }
+    const Icon = icons[mood.toLowerCase() as keyof typeof icons] || Music
+    return <Icon className="w-4 h-4" />
+  }
+
+  const getEnergyStyle = (energy: string) => {
+    switch (energy) {
+      case 'high': return 'bg-white/20 text-white border-white/40'
+      case 'medium': return 'bg-white/15 text-white border-white/30'
+      case 'low': return 'bg-white/10 text-white border-white/20'
+      default: return 'bg-white/10 text-white border-white/20'
     }
   }
 
-  const getDifficultyStyle = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-white/10 text-white border-white/30'
-      case 'intermediate': return 'bg-white/20 text-white border-white/40'
-      case 'advanced': return 'bg-white/30 text-white border-white/50'
-      default: return 'bg-white/10 text-white border-white/20'
-    }
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const formatFileSize = (mb: number) => {
+    return mb >= 1000 ? `${(mb / 1000).toFixed(1)}GB` : `${mb}MB`
   }
 
   const renderStars = (rating: number) => {
@@ -211,96 +248,86 @@ const CourseCard = ({
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
       whileHover={{ scale: 1.02, y: -4 }}
       className="bg-black border border-white/20 rounded-lg p-6 transition-all duration-200 group cursor-pointer"
-      onClick={() => onView(course)}
+      onClick={() => onView(song)}
     >
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center space-x-2 mb-2">
-            <h3 className="font-semibold text-white">{course.title}</h3>
-            {course.isFavorite && (
+            <h3 className="font-semibold text-white">{song.title}</h3>
+            {song.isFavorite && (
               <motion.div
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
               >
-                <Star className="w-4 h-4 text-white fill-current" />
+                <Heart className="w-4 h-4 text-white fill-current" />
               </motion.div>
             )}
-            {course.certificate && (
-              <Award className="w-4 h-4 text-white" />
+            {song.explicit && (
+              <span className="text-xs bg-white/20 text-white px-1 py-0.5 rounded">E</span>
             )}
           </div>
-          <p className="text-sm text-white/60 mb-2">{course.instructor}</p>
-          <p className="text-sm text-white/60 mb-3 line-clamp-2">{course.description}</p>
+          <p className="text-sm text-white/60 mb-1">{song.artist}</p>
+          <p className="text-sm text-white/60 mb-3">{song.album} • {song.releaseYear}</p>
           
           <div className="flex items-center space-x-3 text-sm text-white/60 mb-3">
             <div className="flex items-center space-x-1">
               <Clock className="w-3 h-3" />
-              <span>{course.estimatedHours}h</span>
+              <span>{formatDuration(song.duration)}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <BookOpen className="w-3 h-3" />
-              <span>{course.totalLessons} lessons</span>
+              <Play className="w-3 h-3" />
+              <span>{song.playCount}</span>
             </div>
-            {course.actualHours > 0 && (
-              <div className="flex items-center space-x-1">
-                <TrendingUp className="w-3 h-3" />
-                <span>{course.actualHours}h learned</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-1">
+              <Volume2 className="w-3 h-3" />
+              <span>{song.bitrate}kbps</span>
+            </div>
           </div>
 
           <div className="flex items-center space-x-2 mb-3">
-            <span className={`px-2 py-1 text-xs font-medium rounded border flex items-center space-x-1 ${getDifficultyStyle(course.difficulty)}`}>
-              {getCategoryIcon(course.category)}
-              <span className="capitalize">{course.category.replace('-', ' ')}</span>
+            <span className={`px-2 py-1 text-xs font-medium rounded border flex items-center space-x-1 ${getEnergyStyle(song.energy)}`}>
+              {getGenreIcon(song.genre)}
+              <span className="capitalize">{song.genre}</span>
             </span>
-            <span className={`px-2 py-1 text-xs rounded border capitalize ${getStatusStyle(course.status)}`}>
-              {course.status.replace('-', ' ')}
+            <span className="px-2 py-1 text-xs bg-white/10 text-white border border-white/20 rounded flex items-center space-x-1">
+              {getMoodIcon(song.mood)}
+              <span className="capitalize">{song.mood}</span>
             </span>
             <span className="px-2 py-1 text-xs bg-white/5 text-white/60 rounded border border-white/10 capitalize">
-              {course.difficulty}
+              {song.energy} energy
             </span>
           </div>
 
-          <div className="mb-3">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-white/60">Progress</span>
-              <span className="text-xs text-white">{Math.round(course.progress)}%</span>
-            </div>
-            <div className="w-full bg-white/10 rounded-full h-2">
-              <motion.div 
-                className="bg-white h-2 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${course.progress}%` }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              />
-            </div>
-          </div>
-
-          {course.rating > 0 && (
+          {song.rating > 0 && (
             <div className="flex items-center space-x-2 mb-3">
               <div className="flex items-center space-x-1">
-                {renderStars(course.rating)}
+                {renderStars(song.rating)}
               </div>
               <span className="text-xs text-white/40">
-                {course.completedLessons}/{course.totalLessons} lessons completed
+                {song.fileFormat.toUpperCase()} • {formatFileSize(song.fileSize)}
               </span>
             </div>
           )}
 
-          {course.skills.length > 0 && (
+          {song.tags.length > 0 && (
             <div className="mb-3">
-              <div className="text-xs text-white/60 mb-1">Skills:</div>
+              <div className="text-xs text-white/60 mb-1">Tags:</div>
               <div className="flex flex-wrap gap-1">
-                {course.skills.slice(0, 3).map((skill, index) => (
+                {song.tags.slice(0, 3).map((tag, index) => (
                   <span key={index} className="px-2 py-1 text-xs bg-white/5 text-white/70 rounded border border-white/10">
-                    {skill}
+                    {tag}
                   </span>
                 ))}
-                {course.skills.length > 3 && (
-                  <span className="text-xs text-white/40">+{course.skills.length - 3} more</span>
+                {song.tags.length > 3 && (
+                  <span className="text-xs text-white/40">+{song.tags.length - 3} more</span>
                 )}
               </div>
+            </div>
+          )}
+
+          {song.lastPlayed && (
+            <div className="text-xs text-white/40 mb-3">
+              Last played: {song.lastPlayed.toLocaleDateString()}
             </div>
           )}
         </div>
@@ -311,18 +338,18 @@ const CourseCard = ({
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onToggleFavorite(course.id)
+              onToggleFavorite(song.id)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
-            <Star className={`w-4 h-4 ${course.isFavorite ? 'text-white fill-current' : 'text-white/40'}`} />
+            <Heart className={`w-4 h-4 ${song.isFavorite ? 'text-white fill-current' : 'text-white/40'}`} />
           </motion.button>
           <motion.button
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onEdit(course)
+              onEdit(song)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
@@ -333,7 +360,7 @@ const CourseCard = ({
             whileTap={{ scale: 0.9 }}
             onClick={(e) => {
               e.stopPropagation()
-              onDelete(course.id)
+              onDelete(song.id)
             }}
             className="p-1 rounded hover:bg-white/10 transition-colors"
           >
@@ -342,152 +369,150 @@ const CourseCard = ({
         </div>
       </div>
 
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={(e) => {
-          e.stopPropagation()
-          onStart(course)
-        }}
-        className="w-full bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
-      >
-        {course.status === 'completed' ? (
-          <>
-            <CheckCircle2 className="w-4 h-4" />
-            <span>Review Course</span>
-          </>
-        ) : course.status === 'in-progress' ? (
-          <>
-            <Play className="w-4 h-4" />
-            <span>Continue Learning</span>
-          </>
-        ) : (
-          <>
-            <Play className="w-4 h-4" />
-            <span>Start Course</span>
-          </>
-        )}
-      </motion.button>
+      <div className="flex space-x-2">
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            onPlay(song)
+          }}
+          className="flex-1 bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
+        >
+          <Play className="w-4 h-4" />
+          <span>Play Now</span>
+        </motion.button>
+        
+        <motion.button
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          onClick={(e) => {
+            e.stopPropagation()
+            // Add to queue functionality
+          }}
+          className="px-4 py-3 bg-black border border-white/20 text-white rounded-lg font-medium hover:bg-white/10 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+        </motion.button>
+      </div>
     </motion.div>
   )
 }
 
-// Course Editor Modal
-const CourseEditor = ({
-  course,
+// Song Editor Modal
+const SongEditor = ({
+  song,
   isOpen,
   onClose,
   onSave,
 }: {
-  course: Course | null
+  song: Song | null
   isOpen: boolean
   onClose: () => void
-  onSave: (courseData: Omit<Course, 'id' | 'createdAt'>) => void
+  onSave: (songData: Omit<Song, 'id' | 'createdAt'>) => void
 }) => {
   const [formData, setFormData] = useState({
     title: '',
-    description: '',
-    instructor: '',
-    category: 'programming',
-    difficulty: 'intermediate' as 'beginner' | 'intermediate' | 'advanced',
-    totalLessons: 10,
-    estimatedHours: 5,
-    isFavorite: false,
-    certificate: false,
+    artist: '',
+    album: '',
+    genre: 'pop',
+    duration: 180,
+    releaseYear: new Date().getFullYear(),
     rating: 0,
-    status: 'not-started' as 'not-started' | 'in-progress' | 'completed' | 'paused',
+    isFavorite: false,
+    mood: 'happy',
+    energy: 'medium' as 'low' | 'medium' | 'high',
+    language: 'English',
+    explicit: false,
+    fileFormat: 'mp3' as 'mp3' | 'flac' | 'wav' | 'aac',
+    bitrate: 320,
+    fileSize: 5,
+    albumArtColor: '#ffffff',
   })
 
-  const [skills, setSkills] = useState<string[]>([])
-  const [skillInput, setSkillInput] = useState('')
-  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [tags, setTags] = useState<string[]>([])
+  const [tagInput, setTagInput] = useState('')
+  const [lyrics, setLyrics] = useState('')
+  const [notes, setNotes] = useState('')
 
   useEffect(() => {
-    if (course) {
+    if (song) {
       setFormData({
-        title: course.title,
-        description: course.description,
-        instructor: course.instructor,
-        category: course.category,
-        difficulty: course.difficulty,
-        totalLessons: course.totalLessons,
-        estimatedHours: course.estimatedHours,
-        isFavorite: course.isFavorite,
-        certificate: course.certificate,
-        rating: course.rating,
-        status: course.status,
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        genre: song.genre,
+        duration: song.duration,
+        releaseYear: song.releaseYear,
+        rating: song.rating,
+        isFavorite: song.isFavorite,
+        mood: song.mood,
+        energy: song.energy,
+        language: song.language,
+        explicit: song.explicit,
+        fileFormat: song.fileFormat,
+        bitrate: song.bitrate,
+        fileSize: song.fileSize,
+        albumArtColor: song.albumArtColor,
       })
-      setSkills(course.skills)
-      setLessons(course.lessons)
+      setTags(song.tags)
+      setLyrics(song.lyrics || '')
+      setNotes(song.notes)
     } else {
       setFormData({
         title: '',
-        description: '',
-        instructor: '',
-        category: 'programming',
-        difficulty: 'intermediate',
-        totalLessons: 10,
-        estimatedHours: 5,
-        isFavorite: false,
-        certificate: false,
+        artist: '',
+        album: '',
+        genre: 'pop',
+        duration: 180,
+        releaseYear: new Date().getFullYear(),
         rating: 0,
-        status: 'not-started',
+        isFavorite: false,
+        mood: 'happy',
+        energy: 'medium',
+        language: 'English',
+        explicit: false,
+        fileFormat: 'mp3',
+        bitrate: 320,
+        fileSize: 5,
+        albumArtColor: '#ffffff',
       })
-      setSkills([])
-      setLessons([])
+      setTags([])
+      setLyrics('')
+      setNotes('')
     }
-  }, [course, isOpen])
+  }, [song, isOpen])
 
   const handleSubmit = () => {
     if (!formData.title.trim()) return
 
-    const progress = lessons.length > 0 
-      ? (lessons.filter(l => l.completed).length / lessons.length) * 100 
-      : 0
-
     onSave({
       ...formData,
-      skills,
-      lessons,
-      progress,
-      completedLessons: lessons.filter(l => l.completed).length,
-      actualHours: 0,
-      startDate: formData.status !== 'not-started' ? new Date() : undefined,
-      completedDate: formData.status === 'completed' ? new Date() : undefined,
+      tags,
+      lyrics,
+      notes,
+      playCount: song?.playCount || 0,
+      dateAdded: song?.dateAdded || new Date(),
+      lastPlayed: song?.lastPlayed,
     })
     onClose()
   }
 
-  const addSkill = () => {
-    if (skillInput.trim() && !skills.includes(skillInput.trim())) {
-      setSkills(prev => [...prev, skillInput.trim()])
-      setSkillInput('')
+  const addTag = () => {
+    if (tagInput.trim() && !tags.includes(tagInput.trim())) {
+      setTags(prev => [...prev, tagInput.trim()])
+      setTagInput('')
     }
   }
 
-  const removeSkill = (skill: string) => {
-    setSkills(prev => prev.filter(s => s !== skill))
+  const removeTag = (tag: string) => {
+    setTags(prev => prev.filter(t => t !== tag))
   }
 
-  const addLesson = () => {
-    setLessons(prev => [...prev, {
-      id: Date.now().toString(),
-      title: '',
-      type: 'video',
-      duration: 30,
-      completed: false,
-      notes: ''
-    }])
-  }
-
-  const removeLesson = (index: number) => {
-    setLessons(prev => prev.filter((_, i) => i !== index))
-  }
-
-  const updateLesson = (index: number, field: keyof Lesson, value: any) => {
-    setLessons(prev => prev.map((lesson, i) => 
-      i === index ? { ...lesson, [field]: value } : lesson
-    ))
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
   }
 
   if (!isOpen) return null
@@ -507,8 +532,8 @@ const CourseEditor = ({
       >
         <div className="flex items-center justify-between p-6 border-b border-white/20">
           <h2 className="text-xl font-bold text-white flex items-center space-x-2">
-            <GraduationCap className="w-5 h-5" />
-            <span>{course ? 'Edit Course' : 'Add Course'}</span>
+            <Music className="w-5 h-5" />
+            <span>{song ? 'Edit Song' : 'Add Song'}</span>
           </h2>
           <button
             onClick={onClose}
@@ -523,110 +548,154 @@ const CourseEditor = ({
         <div className="p-6 space-y-6 max-h-[calc(90vh-120px)] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Course Title</label>
+              <label className="block text-sm font-medium text-white mb-2">Song Title</label>
               <input
                 type="text"
                 value={formData.title}
                 onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="e.g., React Complete Guide"
+                placeholder="e.g., Bohemian Rhapsody"
                 autoFocus
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Instructor</label>
+              <label className="block text-sm font-medium text-white mb-2">Artist</label>
               <input
                 type="text"
-                value={formData.instructor}
-                onChange={(e) => setFormData(prev => ({ ...prev, instructor: e.target.value }))}
+                value={formData.artist}
+                onChange={(e) => setFormData(prev => ({ ...prev, artist: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="e.g., John Doe"
+                placeholder="e.g., Queen"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-white mb-2">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-              className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-              placeholder="Describe what you'll learn in this course..."
-              rows={2}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Album</label>
+              <input
+                type="text"
+                value={formData.album}
+                onChange={(e) => setFormData(prev => ({ ...prev, album: e.target.value }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
+                placeholder="e.g., A Night at the Opera"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Release Year</label>
+              <input
+                type="number"
+                min="1900"
+                max="2030"
+                value={formData.releaseYear}
+                onChange={(e) => setFormData(prev => ({ ...prev, releaseYear: parseInt(e.target.value) || new Date().getFullYear() }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Category</label>
+              <label className="block text-sm font-medium text-white mb-2">Genre</label>
               <select
-                value={formData.category}
-                onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                value={formData.genre}
+                onChange={(e) => setFormData(prev => ({ ...prev, genre: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               >
-                <option value="programming">Programming</option>
-                <option value="web-development">Web Development</option>
-                <option value="mobile-development">Mobile Development</option>
-                <option value="design">Design</option>
-                <option value="business">Business</option>
-                <option value="marketing">Marketing</option>
-                <option value="data-science">Data Science</option>
-                <option value="ai">AI & Machine Learning</option>
+                <option value="pop">Pop</option>
+                <option value="rock">Rock</option>
+                <option value="jazz">Jazz</option>
+                <option value="electronic">Electronic</option>
+                <option value="classical">Classical</option>
+                <option value="hip-hop">Hip-Hop</option>
+                <option value="country">Country</option>
+                <option value="folk">Folk</option>
+                <option value="blues">Blues</option>
+                <option value="reggae">Reggae</option>
+                <option value="metal">Metal</option>
+                <option value="indie">Indie</option>
+                <option value="alternative">Alternative</option>
+                <option value="funk">Funk</option>
+                <option value="disco">Disco</option>
                 <option value="other">Other</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Difficulty</label>
+              <label className="block text-sm font-medium text-white mb-2">Mood</label>
               <select
-                value={formData.difficulty}
-                onChange={(e) => setFormData(prev => ({ ...prev, difficulty: e.target.value as 'beginner' | 'intermediate' | 'advanced' }))}
+                value={formData.mood}
+                onChange={(e) => setFormData(prev => ({ ...prev, mood: e.target.value }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               >
-                <option value="beginner">Beginner</option>
-                <option value="intermediate">Intermediate</option>
-                <option value="advanced">Advanced</option>
+                <option value="happy">Happy</option>
+                <option value="sad">Sad</option>
+                <option value="energetic">Energetic</option>
+                <option value="chill">Chill</option>
+                <option value="romantic">Romantic</option>
+                <option value="party">Party</option>
+                <option value="workout">Workout</option>
+                <option value="focus">Focus</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Status</label>
+              <label className="block text-sm font-medium text-white mb-2">Energy Level</label>
               <select
-                value={formData.status}
-                onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'not-started' | 'in-progress' | 'completed' | 'paused' }))}
+                value={formData.energy}
+                onChange={(e) => setFormData(prev => ({ ...prev, energy: e.target.value as 'low' | 'medium' | 'high' }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               >
-                <option value="not-started">Not Started</option>
-                <option value="in-progress">In Progress</option>
-                <option value="paused">Paused</option>
-                <option value="completed">Completed</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
               </select>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Total Lessons</label>
+              <label className="block text-sm font-medium text-white mb-2">Duration (sec)</label>
               <input
                 type="number"
                 min="1"
-                value={formData.totalLessons}
-                onChange={(e) => setFormData(prev => ({ ...prev, totalLessons: parseInt(e.target.value) || 1 }))}
+                value={formData.duration}
+                onChange={(e) => setFormData(prev => ({ ...prev, duration: parseInt(e.target.value) || 1 }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
               />
+              <span className="text-xs text-white/40">{formatDuration(formData.duration)}</span>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-white mb-2">Est. Hours</label>
-              <input
-                type="number"
-                min="0"
-                step="0.5"
-                value={formData.estimatedHours}
-                onChange={(e) => setFormData(prev => ({ ...prev, estimatedHours: parseFloat(e.target.value) || 0 }))}
+              <label className="block text-sm font-medium text-white mb-2">Bitrate (kbps)</label>
+              <select
+                value={formData.bitrate}
+                onChange={(e) => setFormData(prev => ({ ...prev, bitrate: parseInt(e.target.value) }))}
                 className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
-              />
+              >
+                <option value="128">128</option>
+                <option value="192">192</option>
+                <option value="256">256</option>
+                <option value="320">320</option>
+                <option value="1411">1411 (CD)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">File Format</label>
+              <select
+                value={formData.fileFormat}
+                onChange={(e) => setFormData(prev => ({ ...prev, fileFormat: e.target.value as any }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              >
+                <option value="mp3">MP3</option>
+                <option value="flac">FLAC</option>
+                <option value="wav">WAV</option>
+                <option value="aac">AAC</option>
+              </select>
             </div>
 
             <div>
@@ -646,41 +715,63 @@ const CourseEditor = ({
             </div>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">Language</label>
+              <input
+                type="text"
+                value={formData.language}
+                onChange={(e) => setFormData(prev => ({ ...prev, language: e.target.value }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-white mb-2">File Size (MB)</label>
+              <input
+                type="number"
+                min="0.1"
+                step="0.1"
+                value={formData.fileSize}
+                onChange={(e) => setFormData(prev => ({ ...prev, fileSize: parseFloat(e.target.value) || 0.1 }))}
+                className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-white mb-2">Skills You'll Learn</label>
+            <label className="block text-sm font-medium text-white mb-2">Tags</label>
             <div className="flex space-x-2 mb-3">
               <input
                 type="text"
-                value={skillInput}
-                onChange={(e) => setSkillInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && addSkill()}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && addTag()}
                 className="flex-1 px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-                placeholder="Add skills..."
+                placeholder="Add tags..."
               />
               <motion.button
-                type="button"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={addSkill}
+                onClick={addTag}
                 className="px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors text-white"
               >
                 Add
               </motion.button>
             </div>
 
-            {skills.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {skills.map((skill) => (
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-4">
+                {tags.map((tag) => (
                   <motion.span
-                    key={skill}
+                    key={tag}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex items-center space-x-2 px-3 py-1 bg-white/10 text-white rounded-full text-sm border border-white/20"
                   >
-                    <span>{skill}</span>
+                    <span>{tag}</span>
                     <button
-                      type="button"
-                      onClick={() => removeSkill(skill)}
+                      onClick={() => removeTag(tag)}
                       className="text-white/60 hover:text-white"
                     >
                       <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -693,6 +784,28 @@ const CourseEditor = ({
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Lyrics (Optional)</label>
+            <textarea
+              value={lyrics}
+              onChange={(e) => setLyrics(e.target.value)}
+              className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
+              placeholder="Song lyrics..."
+              rows={4}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-white mb-2">Personal Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="w-full px-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
+              placeholder="Your thoughts about this song..."
+              rows={2}
+            />
+          </div>
+
           <div className="flex items-center space-x-4">
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
@@ -702,7 +815,7 @@ const CourseEditor = ({
                 className="w-4 h-4 rounded border-white/20"
               />
               <span className="text-sm text-white flex items-center space-x-1">
-                <Star className="w-4 h-4" />
+                <Heart className="w-4 h-4" />
                 <span>Add to favorites</span>
               </span>
             </label>
@@ -710,13 +823,12 @@ const CourseEditor = ({
             <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="checkbox"
-                checked={formData.certificate}
-                onChange={(e) => setFormData(prev => ({ ...prev, certificate: e.target.checked }))}
+                checked={formData.explicit}
+                onChange={(e) => setFormData(prev => ({ ...prev, explicit: e.target.checked }))}
                 className="w-4 h-4 rounded border-white/20"
               />
               <span className="text-sm text-white flex items-center space-x-1">
-                <Award className="w-4 h-4" />
-                <span>Offers certificate</span>
+                <span>Explicit content</span>
               </span>
             </label>
           </div>
@@ -728,7 +840,7 @@ const CourseEditor = ({
               onClick={handleSubmit}
               className="flex-1 bg-white text-black py-3 rounded-lg font-medium hover:bg-white/90 transition-colors"
             >
-              {course ? 'Update Course' : 'Add Course'}
+              {song ? 'Update Song' : 'Add Song'}
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.02 }}
@@ -762,7 +874,7 @@ const SearchAndFilters = ({
     >
       <div className="flex items-center space-x-2 mb-4">
         <Search className="w-5 h-5 text-white" />
-        <h3 className="font-semibold text-white">Search & Filter Courses</h3>
+        <h3 className="font-semibold text-white">Search & Filter Music</h3>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -775,56 +887,61 @@ const SearchAndFilters = ({
               value={filters.searchQuery}
               onChange={(e) => onFilterChange({ ...filters, searchQuery: e.target.value })}
               className="w-full pl-10 pr-4 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white placeholder-white/40"
-              placeholder="Search courses..."
+              placeholder="Search songs..."
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">Category</label>
+          <label className="block text-sm font-medium text-white mb-2">Genre</label>
           <select
-            value={filters.category}
-            onChange={(e) => onFilterChange({ ...filters, category: e.target.value })}
+            value={filters.genre}
+            onChange={(e) => onFilterChange({ ...filters, genre: e.target.value })}
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
-            <option value="">All Categories</option>
-            <option value="programming">Programming</option>
-            <option value="web-development">Web Development</option>
-            <option value="mobile-development">Mobile Development</option>
-            <option value="design">Design</option>
-            <option value="business">Business</option>
-            <option value="marketing">Marketing</option>
-            <option value="data-science">Data Science</option>
-            <option value="ai">AI & Machine Learning</option>
+            <option value="">All Genres</option>
+            <option value="pop">Pop</option>
+            <option value="rock">Rock</option>
+            <option value="jazz">Jazz</option>
+            <option value="electronic">Electronic</option>
+            <option value="classical">Classical</option>
+            <option value="hip-hop">Hip-Hop</option>
+            <option value="country">Country</option>
+            <option value="folk">Folk</option>
+            <option value="blues">Blues</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">Difficulty</label>
+          <label className="block text-sm font-medium text-white mb-2">Mood</label>
           <select
-            value={filters.difficulty}
-            onChange={(e) => onFilterChange({ ...filters, difficulty: e.target.value })}
+            value={filters.mood}
+            onChange={(e) => onFilterChange({ ...filters, mood: e.target.value })}
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
-            <option value="">All Difficulties</option>
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
+            <option value="">All Moods</option>
+            <option value="happy">Happy</option>
+            <option value="sad">Sad</option>
+            <option value="energetic">Energetic</option>
+            <option value="chill">Chill</option>
+            <option value="romantic">Romantic</option>
+            <option value="party">Party</option>
+            <option value="workout">Workout</option>
+            <option value="focus">Focus</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-white mb-2">Status</label>
+          <label className="block text-sm font-medium text-white mb-2">Energy</label>
           <select
-            value={filters.status}
-            onChange={(e) => onFilterChange({ ...filters, status: e.target.value })}
+            value={filters.energy}
+            onChange={(e) => onFilterChange({ ...filters, energy: e.target.value })}
             className="w-full px-3 py-2 bg-black border border-white/20 rounded-lg focus:border-white outline-none text-white"
           >
-            <option value="">All Status</option>
-            <option value="not-started">Not Started</option>
-            <option value="in-progress">In Progress</option>
-            <option value="paused">Paused</option>
-            <option value="completed">Completed</option>
+            <option value="">All Energy Levels</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
           </select>
         </div>
       </div>
@@ -838,7 +955,7 @@ const SearchAndFilters = ({
             className="w-4 h-4 rounded border-white/20"
           />
           <span className="text-sm text-white flex items-center space-x-1">
-            <Star className="w-4 h-4" />
+            <Heart className="w-4 h-4" />
             <span>Favorites only</span>
           </span>
         </label>
@@ -848,112 +965,111 @@ const SearchAndFilters = ({
 }
 
 // Main App Component
-export default function LearningTracker() {
-  const [courses, setCourses] = useState<Course[]>([])
-  const [goals, setGoals] = useState<LearningGoal[]>([])
+export default function MusicTracker() {
+  const [songs, setSongs] = useState<Song[]>([])
+  const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [filters, setFilters] = useState<FilterState>({
-    category: '',
-    difficulty: '',
-    status: '',
+    genre: '',
+    mood: '',
+    energy: '',
+    artist: '',
     favorites: false,
     searchQuery: '',
+    year: '',
   })
   const [isEditorOpen, setIsEditorOpen] = useState(false)
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null)
-  const [viewingCourse, setViewingCourse] = useState<Course | null>(null)
+  const [editingSong, setEditingSong] = useState<Song | null>(null)
+  const [viewingSong, setViewingSong] = useState<Song | null>(null)
 
-  // Load courses from localStorage
+  // Load songs from localStorage
   useEffect(() => {
-    const savedCourses = localStorage.getItem('courses')
-    if (savedCourses) {
-      const parsedCourses = JSON.parse(savedCourses).map((course: any) => ({
-        ...course,
-        createdAt: new Date(course.createdAt),
-        startDate: course.startDate ? new Date(course.startDate) : undefined,
-        completedDate: course.completedDate ? new Date(course.completedDate) : undefined,
-        targetDate: course.targetDate ? new Date(course.targetDate) : undefined,
+    const savedSongs = localStorage.getItem('songs')
+    if (savedSongs) {
+      const parsedSongs = JSON.parse(savedSongs).map((song: any) => ({
+        ...song,
+        dateAdded: new Date(song.dateAdded),
+        lastPlayed: song.lastPlayed ? new Date(song.lastPlayed) : undefined,
+        createdAt: new Date(song.createdAt),
       }))
-      setCourses(parsedCourses)
+      setSongs(parsedSongs)
     }
   }, [])
 
-  // Save courses to localStorage
+  // Save songs to localStorage
   useEffect(() => {
-    if (courses.length > 0) {
-      localStorage.setItem('courses', JSON.stringify(courses))
+    if (songs.length > 0) {
+      localStorage.setItem('songs', JSON.stringify(songs))
     }
-  }, [courses])
+  }, [songs])
 
-  const createCourse = () => {
-    setEditingCourse(null)
+  const createSong = () => {
+    setEditingSong(null)
     setIsEditorOpen(true)
   }
 
-  const editCourse = (course: Course) => {
-    setEditingCourse(course)
+  const editSong = (song: Song) => {
+    setEditingSong(song)
     setIsEditorOpen(true)
   }
 
-  const viewCourse = (course: Course) => {
-    setViewingCourse(course)
+  const viewSong = (song: Song) => {
+    setViewingSong(song)
   }
 
-  const startCourse = (course: Course) => {
-    setCourses(prev => prev.map(c => 
-      c.id === course.id 
+  const playSong = (song: Song) => {
+    setSongs(prev => prev.map(s => 
+      s.id === song.id 
         ? { 
-            ...c, 
-            status: c.status === 'not-started' ? 'in-progress' : c.status,
-            startDate: c.startDate || new Date(),
-            actualHours: c.actualHours + 0.5
+            ...s, 
+            playCount: s.playCount + 1,
+            lastPlayed: new Date()
           }
-        : c
+        : s
     ))
   }
 
-  const saveCourse = (courseData: Omit<Course, 'id' | 'createdAt'>) => {
-    if (editingCourse) {
-      // Update existing course
-      setCourses(prev => prev.map(course => 
-        course.id === editingCourse.id 
-          ? { ...course, ...courseData }
-          : course
+  const saveSong = (songData: Omit<Song, 'id' | 'createdAt'>) => {
+    if (editingSong) {
+      // Update existing song
+      setSongs(prev => prev.map(song => 
+        song.id === editingSong.id 
+          ? { ...song, ...songData }
+          : song
       ))
     } else {
-      // Create new course
-      const newCourse: Course = {
-        ...courseData,
+      // Create new song
+      const newSong: Song = {
+        ...songData,
         id: Date.now().toString(),
         createdAt: new Date(),
-        lessons: [],
       }
-      setCourses(prev => [newCourse, ...prev])
+      setSongs(prev => [newSong, ...prev])
     }
   }
 
   const toggleFavorite = (id: string) => {
-    setCourses(prev => prev.map(course =>
-      course.id === id ? { ...course, isFavorite: !course.isFavorite } : course
+    setSongs(prev => prev.map(song =>
+      song.id === id ? { ...song, isFavorite: !song.isFavorite } : song
     ))
   }
 
-  const deleteCourse = (id: string) => {
-    setCourses(prev => prev.filter(course => course.id !== id))
+  const deleteSong = (id: string) => {
+    setSongs(prev => prev.filter(song => song.id !== id))
   }
 
-  // Filter courses
-  const filteredCourses = courses.filter(course => {
-    if (filters.category && course.category !== filters.category) return false
-    if (filters.difficulty && course.difficulty !== filters.difficulty) return false
-    if (filters.status && course.status !== filters.status) return false
-    if (filters.favorites && !course.isFavorite) return false
+  // Filter songs
+  const filteredSongs = songs.filter(song => {
+    if (filters.genre && song.genre !== filters.genre) return false
+    if (filters.mood && song.mood !== filters.mood) return false
+    if (filters.energy && song.energy !== filters.energy) return false
+    if (filters.favorites && !song.isFavorite) return false
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase()
       return (
-        course.title.toLowerCase().includes(query) ||
-        course.instructor.toLowerCase().includes(query) ||
-        course.description.toLowerCase().includes(query) ||
-        course.skills.some(skill => skill.toLowerCase().includes(query))
+        song.title.toLowerCase().includes(query) ||
+        song.artist.toLowerCase().includes(query) ||
+        song.album.toLowerCase().includes(query) ||
+        song.tags.some(tag => tag.toLowerCase().includes(query))
       )
     }
     return true
@@ -964,9 +1080,9 @@ export default function LearningTracker() {
       <Header />
 
       <div className="container mx-auto px-4 py-8">
-        <LearningStats courses={courses} goals={goals} />
+        <MusicStats songs={songs} playlists={playlists} />
 
-        {/* Create Course Button */}
+        {/* Add Song Button */}
         <motion.div
           className="mb-8"
           initial={{ opacity: 0, y: 20 }}
@@ -976,59 +1092,59 @@ export default function LearningTracker() {
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={createCourse}
+            onClick={createSong}
             className="w-full bg-white text-black py-4 rounded-lg font-semibold hover:bg-white/90 transition-colors flex items-center justify-center space-x-2"
           >
             <Plus className="w-5 h-5" />
-            <span>Add New Course</span>
+            <span>Add New Song</span>
           </motion.button>
         </motion.div>
 
         <SearchAndFilters filters={filters} onFilterChange={setFilters} />
 
-        {/* Courses Grid */}
+        {/* Songs Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <AnimatePresence>
-            {filteredCourses.map((course) => (
-              <CourseCard
-                key={course.id}
-                course={course}
-                onView={viewCourse}
-                onStart={startCourse}
+            {filteredSongs.map((song) => (
+              <SongCard
+                key={song.id}
+                song={song}
+                onView={viewSong}
+                onPlay={playSong}
                 onToggleFavorite={toggleFavorite}
-                onEdit={editCourse}
-                onDelete={deleteCourse}
+                onEdit={editSong}
+                onDelete={deleteSong}
               />
             ))}
           </AnimatePresence>
         </div>
 
         {/* Empty State */}
-        {filteredCourses.length === 0 && (
+        {filteredSongs.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="text-center py-12"
           >
-            <div className="text-white/20 text-6xl mb-4">🎓</div>
-            <h3 className="text-xl font-semibold text-white mb-2">No courses found</h3>
+            <div className="text-white/20 text-6xl mb-4">🎵</div>
+            <h3 className="text-xl font-semibold text-white mb-2">No songs found</h3>
             <p className="text-white/60">
-              {courses.length === 0
-                ? 'Add your first course to start your learning journey!'
+              {songs.length === 0
+                ? 'Add your first song to start building your music library!'
                 : 'Try adjusting your search or filters.'}
             </p>
           </motion.div>
         )}
       </div>
 
-      {/* Course Editor Modal */}
+      {/* Song Editor Modal */}
       <AnimatePresence>
         {isEditorOpen && (
-          <CourseEditor
-            course={editingCourse}
+          <SongEditor
+            song={editingSong}
             isOpen={isEditorOpen}
             onClose={() => setIsEditorOpen(false)}
-            onSave={saveCourse}
+            onSave={saveSong}
           />
         )}
       </AnimatePresence>
